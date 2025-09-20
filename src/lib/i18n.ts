@@ -1,0 +1,382 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+const resources = {
+  en: {
+    translation: {
+      // Navigation
+      nav: {
+        dashboard: 'Dashboard',
+        aiAssistant: 'AI Assistant',
+        mandiPrices: 'Mandi Prices',
+        weather: 'Weather',
+        cropHealth: 'Crop Health',
+        schemes: 'Schemes',
+        appName: 'Farmer Support',
+        tagline: 'Digital Agriculture'
+      },
+      // Dashboard
+      dashboard: {
+        welcome: 'Welcome to Farmer Support App',
+        description: 'Your comprehensive digital companion for modern farming. Access AI-powered insights, market prices, weather updates, and government schemes all in one place.',
+        todaysTips: "Today's Farming Tips",
+        temperature: "Today's Temperature",
+        humidity: 'Humidity',
+        activeFarmers: 'Active Farmers',
+        weatherAlert: 'Weather Alert',
+        marketUpdate: 'Market Update',
+        seasonalTip: 'Seasonal Tip'
+      },
+      // AI Assistant
+      assistant: {
+        title: 'AI Farming Assistant',
+        subtitle: 'Talk to me about farming!',
+        listening: 'Listening...',
+        speaking: 'Speaking...',
+        placeholder: 'Ask me anything or click the mic to speak',
+        startVoice: 'Start Voice',
+        stopVoice: 'Stop Voice',
+        send: 'Send',
+        suggestedQuestions: 'Suggested questions',
+        selectLanguage: 'Select Language',
+        voiceEnabled: 'Voice Enabled',
+        textMode: 'Text Mode'
+      },
+      // Mandi Prices
+      mandi: {
+        title: 'Live Mandi Prices',
+        search: 'Search',
+        searchPlaceholder: 'Search commodity or market...',
+        state: 'State',
+        allStates: 'All States',
+        commodity: 'Commodity',
+        allCommodities: 'All Commodities',
+        market: 'Market',
+        district: 'District',
+        minPrice: 'Min Price',
+        maxPrice: 'Max Price',
+        modalPrice: 'Modal Price',
+        swipeHint: 'Swipe left/right to see all columns',
+        perQuintal: '₹/Quintal'
+      },
+      // Weather
+      weather: {
+        title: 'Weather Forecast',
+        searchCity: 'Enter city name...',
+        search: 'Search',
+        currentWeather: 'Current Weather',
+        feelsLike: 'Feels like',
+        windSpeed: 'Wind Speed',
+        pressure: 'Pressure',
+        humidity: 'Humidity',
+        alerts: 'Agricultural Weather Alerts',
+        forecast: '5-Day Forecast',
+        heatWarning: 'High temperature alert! Ensure adequate irrigation.',
+        humidityWarning: 'High humidity detected. Monitor crops for fungal diseases.',
+        windWarning: 'Strong winds expected. Secure loose structures.',
+        rainForecast: 'Rain expected in the next 24 hours.'
+      },
+      // Crop Detection
+      crop: {
+        title: 'Crop Health Detection',
+        subtitle: 'Upload a photo of your crop to get AI-powered disease detection and treatment recommendations',
+        upload: 'Click to upload an image of your crop',
+        formats: 'Supported formats: JPG, PNG (Max 10MB)',
+        chooseImage: 'Choose Image',
+        changeImage: 'Change Image',
+        analyze: 'Analyze Crop',
+        analyzing: 'Analyzing...',
+        results: 'Analysis Results',
+        plantType: 'Plant/Crop Type',
+        healthStatus: 'Health Status',
+        disease: 'Disease/Problem Identification',
+        symptoms: 'Visible Symptoms',
+        causes: 'Probable Causes',
+        treatment: 'Treatment Recommendations',
+        prevention: 'Prevention Measures',
+        urgency: 'Urgency Level',
+        tips: 'Tips for Better Analysis'
+      },
+      // Government Schemes
+      schemes: {
+        title: 'Government Schemes for Farmers',
+        search: 'Search schemes...',
+        allCategories: 'All Categories',
+        viewDetails: 'View Details',
+        description: 'Description',
+        benefits: 'Benefits',
+        eligibility: 'Eligibility Criteria',
+        documents: 'Required Documents',
+        process: 'Application Process',
+        visitWebsite: 'Visit Official Website',
+        since: 'Since'
+      }
+    }
+  },
+  hi: {
+    translation: {
+      nav: {
+        dashboard: 'डैशबोर्ड',
+        aiAssistant: 'AI सहायक',
+        mandiPrices: 'मंडी भाव',
+        weather: 'मौसम',
+        cropHealth: 'फसल स्वास्थ्य',
+        schemes: 'योजनाएं',
+        appName: 'किसान सहायता',
+        tagline: 'डिजिटल कृषि'
+      },
+      dashboard: {
+        welcome: 'किसान सहायता ऐप में आपका स्वागत है',
+        description: 'आधुनिक खेती के लिए आपका व्यापक डिजिटल साथी। AI-संचालित अंतर्दृष्टि, बाजार मूल्य, मौसम अपडेट और सरकारी योजनाओं तक एक ही स्थान पर पहुंच प्राप्त करें।',
+        todaysTips: 'आज की खेती युक्तियाँ',
+        temperature: 'आज का तापमान',
+        humidity: 'नमी',
+        activeFarmers: 'सक्रिय किसान',
+        weatherAlert: 'मौसम चेतावनी',
+        marketUpdate: 'बाजार अपडेट',
+        seasonalTip: 'मौसमी सुझाव'
+      },
+      assistant: {
+        title: 'AI खेती सहायक',
+        subtitle: 'खेती के बारे में मुझसे बात करें!',
+        listening: 'सुन रहा हूं...',
+        speaking: 'बोल रहा हूं...',
+        placeholder: 'कुछ भी पूछें या बोलने के लिए माइक पर क्लिक करें',
+        startVoice: 'आवाज़ शुरू करें',
+        stopVoice: 'आवाज़ बंद करें',
+        send: 'भेजें',
+        suggestedQuestions: 'सुझाए गए प्रश्न',
+        selectLanguage: 'भाषा चुनें',
+        voiceEnabled: 'आवाज़ सक्षम',
+        textMode: 'टेक्स्ट मोड'
+      },
+      mandi: {
+        title: 'लाइव मंडी भाव',
+        search: 'खोजें',
+        searchPlaceholder: 'वस्तु या बाजार खोजें...',
+        state: 'राज्य',
+        allStates: 'सभी राज्य',
+        commodity: 'वस्तु',
+        allCommodities: 'सभी वस्तुएं',
+        market: 'बाजार',
+        district: 'जिला',
+        minPrice: 'न्यूनतम मूल्य',
+        maxPrice: 'अधिकतम मूल्य',
+        modalPrice: 'मोडल मूल्य',
+        swipeHint: 'सभी कॉलम देखने के लिए बाएं/दाएं स्वाइप करें',
+        perQuintal: '₹/क्विंटल'
+      },
+      weather: {
+        title: 'मौसम पूर्वानुमान',
+        searchCity: 'शहर का नाम दर्ज करें...',
+        search: 'खोजें',
+        currentWeather: 'वर्तमान मौसम',
+        feelsLike: 'महसूस होता है',
+        windSpeed: 'हवा की गति',
+        pressure: 'दबाव',
+        humidity: 'नमी',
+        alerts: 'कृषि मौसम चेतावनी',
+        forecast: '5-दिन का पूर्वानुमान',
+        heatWarning: 'उच्च तापमान चेतावनी! पर्याप्त सिंचाई सुनिश्चित करें।',
+        humidityWarning: 'उच्च आर्द्रता। फंगल रोगों के लिए फसलों की निगरानी करें।',
+        windWarning: 'तेज़ हवाएं अपेक्षित। ढीली संरचनाओं को सुरक्षित करें।',
+        rainForecast: 'अगले 24 घंटों में बारिश की संभावना।'
+      },
+      crop: {
+        title: 'फसल स्वास्थ्य जांच',
+        subtitle: 'AI-संचालित रोग पहचान और उपचार सिफारिशों के लिए अपनी फसल की फोटो अपलोड करें',
+        upload: 'अपनी फसल की तस्वीर अपलोड करने के लिए क्लिक करें',
+        formats: 'समर्थित प्रारूप: JPG, PNG (अधिकतम 10MB)',
+        chooseImage: 'छवि चुनें',
+        changeImage: 'छवि बदलें',
+        analyze: 'फसल का विश्लेषण करें',
+        analyzing: 'विश्लेषण कर रहे हैं...',
+        results: 'विश्लेषण परिणाम',
+        plantType: 'पौधा/फसल प्रकार',
+        healthStatus: 'स्वास्थ्य स्थिति',
+        disease: 'रोग/समस्या पहचान',
+        symptoms: 'दृश्य लक्षण',
+        causes: 'संभावित कारण',
+        treatment: 'उपचार सिफारिशें',
+        prevention: 'रोकथाम उपाय',
+        urgency: 'तात्कालिकता स्तर',
+        tips: 'बेहतर विश्लेषण के लिए सुझाव'
+      },
+      schemes: {
+        title: 'किसानों के लिए सरकारी योजनाएं',
+        search: 'योजनाएं खोजें...',
+        allCategories: 'सभी श्रेणियां',
+        viewDetails: 'विवरण देखें',
+        description: 'विवरण',
+        benefits: 'लाभ',
+        eligibility: 'पात्रता मानदंड',
+        documents: 'आवश्यक दस्तावेज',
+        process: 'आवेदन प्रक्रिया',
+        visitWebsite: 'आधिकारिक वेबसाइट पर जाएं',
+        since: 'से'
+      }
+    }
+  },
+  pa: {
+    translation: {
+      nav: {
+        dashboard: 'ਡੈਸ਼ਬੋਰਡ',
+        aiAssistant: 'AI ਸਹਾਇਕ',
+        mandiPrices: 'ਮੰਡੀ ਭਾਅ',
+        weather: 'ਮੌਸਮ',
+        cropHealth: 'ਫਸਲ ਸਿਹਤ',
+        schemes: 'ਸਕੀਮਾਂ',
+        appName: 'ਕਿਸਾਨ ਸਹਾਇਤਾ',
+        tagline: 'ਡਿਜੀਟਲ ਖੇਤੀ'
+      },
+      dashboard: {
+        welcome: 'ਕਿਸਾਨ ਸਹਾਇਤਾ ਐਪ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ',
+        description: 'ਆਧੁਨਿਕ ਖੇਤੀ ਲਈ ਤੁਹਾਡਾ ਵਿਆਪਕ ਡਿਜੀਟਲ ਸਾਥੀ।',
+        todaysTips: 'ਅੱਜ ਦੀਆਂ ਖੇਤੀ ਟਿੱਪਸ',
+        temperature: 'ਅੱਜ ਦਾ ਤਾਪਮਾਨ',
+        humidity: 'ਨਮੀ',
+        activeFarmers: 'ਸਰਗਰਮ ਕਿਸਾਨ',
+        weatherAlert: 'ਮੌਸਮ ਚੇਤਾਵਨੀ',
+        marketUpdate: 'ਮਾਰਕੀਟ ਅੱਪਡੇਟ',
+        seasonalTip: 'ਮੌਸਮੀ ਸੁਝਾਅ'
+      },
+      assistant: {
+        title: 'AI ਖੇਤੀ ਸਹਾਇਕ',
+        subtitle: 'ਖੇਤੀ ਬਾਰੇ ਮੇਰੇ ਨਾਲ ਗੱਲ ਕਰੋ!',
+        listening: 'ਸੁਣ ਰਿਹਾ ਹਾਂ...',
+        speaking: 'ਬੋਲ ਰਿਹਾ ਹਾਂ...',
+        placeholder: 'ਕੁਝ ਵੀ ਪੁੱਛੋ ਜਾਂ ਬੋਲਣ ਲਈ ਮਾਈਕ ਤੇ ਕਲਿੱਕ ਕਰੋ',
+        startVoice: 'ਆਵਾਜ਼ ਸ਼ੁਰੂ ਕਰੋ',
+        stopVoice: 'ਆਵਾਜ਼ ਬੰਦ ਕਰੋ',
+        send: 'ਭੇਜੋ',
+        suggestedQuestions: 'ਸੁਝਾਏ ਗਏ ਸਵਾਲ',
+        selectLanguage: 'ਭਾਸ਼ਾ ਚੁਣੋ',
+        voiceEnabled: 'ਆਵਾਜ਼ ਸਮਰੱਥ',
+        textMode: 'ਟੈਕਸਟ ਮੋਡ'
+      }
+    }
+  },
+  ta: {
+    translation: {
+      nav: {
+        dashboard: 'டாஷ்போர்டு',
+        aiAssistant: 'AI உதவியாளர்',
+        mandiPrices: 'மண்டி விலைகள்',
+        weather: 'வானிலை',
+        cropHealth: 'பயிர் ஆரோக்கியம்',
+        schemes: 'திட்டங்கள்',
+        appName: 'விவசாயி ஆதரவு',
+        tagline: 'டிஜிட்டல் விவசாயம்'
+      },
+      dashboard: {
+        welcome: 'விவசாயி ஆதரவு செயலிக்கு வரவேற்கிறோம்',
+        description: 'நவீன விவசாயத்திற்கான உங்கள் விரிவான டிஜிட்டல் துணை.',
+        todaysTips: 'இன்றைய விவசாய குறிப்புகள்',
+        temperature: 'இன்றைய வெப்பநிலை',
+        humidity: 'ஈரப்பதம்',
+        activeFarmers: 'செயலில் உள்ள விவசாயிகள்'
+      }
+    }
+  },
+  te: {
+    translation: {
+      nav: {
+        dashboard: 'డాష్‌బోర్డ్',
+        aiAssistant: 'AI సహాయకుడు',
+        mandiPrices: 'మండి ధరలు',
+        weather: 'వాతావరణం',
+        cropHealth: 'పంట ఆరోగ్యం',
+        schemes: 'పథకాలు',
+        appName: 'రైతు మద్దతు',
+        tagline: 'డిజిటల్ వ్యవసాయం'
+      },
+      dashboard: {
+        welcome: 'రైతు మద్దతు యాప్‌కు స్వాగతం',
+        description: 'ఆధునిక వ్యవసాయం కోసం మీ సమగ్ర డిజిటల్ సహచరుడు.',
+        todaysTips: 'నేటి వ్యవసాయ చిట్కాలు',
+        temperature: 'నేటి ఉష్ణోగ్రత',
+        humidity: 'తేమ',
+        activeFarmers: 'చురుకైన రైతులు'
+      }
+    }
+  },
+  mr: {
+    translation: {
+      nav: {
+        dashboard: 'डॅशबोर्ड',
+        aiAssistant: 'AI सहाय्यक',
+        mandiPrices: 'मंडी भाव',
+        weather: 'हवामान',
+        cropHealth: 'पीक आरोग्य',
+        schemes: 'योजना',
+        appName: 'शेतकरी सहाय्य',
+        tagline: 'डिजिटल शेती'
+      },
+      dashboard: {
+        welcome: 'शेतकरी सहाय्य अॅपमध्ये आपले स्वागत आहे',
+        description: 'आधुनिक शेतीसाठी तुमचा सर्वसमावेशक डिजिटल सहचर.',
+        todaysTips: 'आजच्या शेती टिप्स',
+        temperature: 'आजचे तापमान',
+        humidity: 'आर्द्रता',
+        activeFarmers: 'सक्रिय शेतकरी'
+      }
+    }
+  },
+  gu: {
+    translation: {
+      nav: {
+        dashboard: 'ડેશબોર્ડ',
+        aiAssistant: 'AI સહાયક',
+        mandiPrices: 'મંડી ભાવ',
+        weather: 'હવામાન',
+        cropHealth: 'પાક સ્વાસ્થ્ય',
+        schemes: 'યોજનાઓ',
+        appName: 'ખેડૂત સહાય',
+        tagline: 'ડિજિટલ ખેતી'
+      },
+      dashboard: {
+        welcome: 'ખેડૂત સહાય એપમાં આપનું સ્વાગત છે',
+        description: 'આધુનિક ખેતી માટે તમારો વ્યાપક ડિજિટલ સાથી.',
+        todaysTips: 'આજની ખેતી ટિપ્સ',
+        temperature: 'આજનું તાપમાન',
+        humidity: 'ભેજ',
+        activeFarmers: 'સક્રિય ખેડૂતો'
+      }
+    }
+  },
+  bn: {
+    translation: {
+      nav: {
+        dashboard: 'ড্যাশবোর্ড',
+        aiAssistant: 'AI সহায়ক',
+        mandiPrices: 'মান্ডি মূল্য',
+        weather: 'আবহাওয়া',
+        cropHealth: 'ফসল স্বাস্থ্য',
+        schemes: 'প্রকল্প',
+        appName: 'কৃষক সহায়তা',
+        tagline: 'ডিজিটাল কৃষি'
+      },
+      dashboard: {
+        welcome: 'কৃষক সহায়তা অ্যাপে স্বাগতম',
+        description: 'আধুনিক কৃষিকাজের জন্য আপনার ব্যাপক ডিজিটাল সঙ্গী।',
+        todaysTips: 'আজকের কৃষি টিপস',
+        temperature: 'আজকের তাপমাত্রা',
+        humidity: 'আর্দ্রতা',
+        activeFarmers: 'সক্রিয় কৃষক'
+      }
+    }
+  }
+};
+
+i18n
+  .use(initReactI18next)
+  .init({
+    resources,
+    lng: 'en', // Default language
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false
+    }
+  });
+
+export default i18n;
