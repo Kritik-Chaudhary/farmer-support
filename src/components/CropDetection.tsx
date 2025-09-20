@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera, Upload, CheckCircle, Volume2, AlertTriangle, Leaf } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
@@ -98,34 +98,61 @@ export default function CropDetection() {
   };
 
   const speakAnalysis = () => {
-    if (!analysis) return;
+    if (!analysis) {
+      alert('No analysis available to speak');
+      return;
+    }
+    
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in your browser');
+      return;
+    }
     
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      speechSynthesis.cancel();
       setIsSpeaking(false);
       return;
     }
 
-    const textToSpeak = `
-      Crop Analysis Results.
-      Plant Type: ${analysis.plantType}.
-      Health Status: ${analysis.healthStatus}.
-      Disease Identified: ${analysis.diseaseIdentification}.
-      Urgency Level: ${analysis.urgency}.
-      Symptoms: ${analysis.symptoms}.
-      Causes: ${analysis.causes}.
-      Treatment: ${analysis.treatment}.
-      Prevention: ${analysis.prevention}.
-    `;
+    // Create a simple summary for speech
+    const summary = `Analysis complete. This is a ${analysis.plantType.split('.')[0]}. Health status: ${analysis.healthStatus.split('.')[0]}. Disease: ${analysis.diseaseIdentification}. Treatment: ${analysis.treatment.split('.')[0]}. Prevention: ${analysis.prevention.split('.')[0]}.`;
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    console.log('Speaking:', summary);
+    
+    try {
+      const utterance = new SpeechSynthesisUtterance(summary);
+      
+      // Simple settings
+      utterance.rate = 0.9;
+      utterance.volume = 1;
+      utterance.pitch = 1;
+      
+      // Event handlers
+      utterance.onstart = () => {
+        console.log('Speech started');
+        setIsSpeaking(true);
+      };
+      
+      utterance.onend = () => {
+        console.log('Speech ended');
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech error:', event.error);
+        setIsSpeaking(false);
+        alert('Unable to speak results. Please check your browser settings.');
+      };
 
-    window.speechSynthesis.speak(utterance);
+      // Use default voice - don't try to set a specific voice
+      speechSynthesis.speak(utterance);
+      
+    } catch (error) {
+      console.error('Speech synthesis failed:', error);
+      setIsSpeaking(false);
+      alert('Speech synthesis is not available');
+    }
   };
 
   return (
