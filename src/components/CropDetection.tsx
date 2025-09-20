@@ -87,6 +87,17 @@ export default function CropDetection() {
     return result + (result && !result.endsWith('.') ? '.' : '');
   };
 
+  const formatBasicInfo = (text: string, maxWords: number = 8): string => {
+    // Clean the text and extract the first meaningful words
+    const cleanText = text.replace(/[()\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    const words = cleanText.split(' ');
+    
+    if (words.length <= maxWords) return cleanText;
+    
+    // Take first maxWords and add '...' if truncated
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
+
   const speakAnalysis = () => {
     if (!analysis) return;
     
@@ -208,17 +219,21 @@ export default function CropDetection() {
           {/* Basic Info Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-1">Crop Type</h4>
-              <p className="text-lg font-bold text-gray-900">{analysis.plantType}</p>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">Crop Type</h4>
+              <p className="text-lg font-bold text-gray-900 leading-tight">
+                {formatBasicInfo(analysis.plantType, 4)}
+              </p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-1">Health Status</h4>
-              <p className="text-lg font-bold text-gray-900">{analysis.healthStatus}</p>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">Health Status</h4>
+              <p className="text-sm font-bold text-gray-900 leading-tight">
+                {formatBasicInfo(analysis.healthStatus, 6)}
+              </p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-1">Urgency Level</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">Urgency Level</h4>
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${getUrgencyColor(analysis.urgency)}`}>
-                {analysis.urgency}
+                {formatBasicInfo(analysis.urgency, 2)}
               </span>
             </div>
           </div>
