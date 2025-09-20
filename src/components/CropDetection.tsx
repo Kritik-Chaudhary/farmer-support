@@ -24,10 +24,12 @@ export default function CropDetection() {
   const [analysis, setAnalysis] = useState<CropAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speechCancelledByUser, setSpeechCancelledByUser] = useState(false);
 
   // Function to stop speech synthesis
   const stopSpeech = useCallback(() => {
     if (isSpeaking && 'speechSynthesis' in window) {
+      setSpeechCancelledByUser(true);
       speechSynthesis.cancel();
       setIsSpeaking(false);
       console.log('Speech interrupted');
@@ -159,6 +161,7 @@ export default function CropDetection() {
     }
     
     if (isSpeaking) {
+      setSpeechCancelledByUser(true);
       speechSynthesis.cancel();
       setIsSpeaking(false);
       return;
@@ -170,6 +173,9 @@ export default function CropDetection() {
     console.log('Speaking:', summary);
     
     try {
+      // Reset cancellation flag
+      setSpeechCancelledByUser(false);
+      
       const utterance = new SpeechSynthesisUtterance(summary);
       
       // Simple settings
@@ -186,12 +192,18 @@ export default function CropDetection() {
       utterance.onend = () => {
         console.log('Speech ended');
         setIsSpeaking(false);
+        setSpeechCancelledByUser(false);
       };
       
       utterance.onerror = (event) => {
         console.error('Speech error:', event.error);
         setIsSpeaking(false);
-        alert('Unable to speak results. Please check your browser settings.');
+        
+        // Only show error alert if it wasn't cancelled by user
+        if (!speechCancelledByUser && event.error !== 'canceled' && event.error !== 'interrupted') {
+          alert('Unable to speak results. Please check your browser settings.');
+        }
+        setSpeechCancelledByUser(false);
       };
 
       // Use default voice - don't try to set a specific voice
@@ -200,7 +212,9 @@ export default function CropDetection() {
     } catch (error) {
       console.error('Speech synthesis failed:', error);
       setIsSpeaking(false);
-      alert('Speech synthesis is not available');
+      if (!speechCancelledByUser) {
+        alert('Speech synthesis is not available');
+      }
     }
   };
 

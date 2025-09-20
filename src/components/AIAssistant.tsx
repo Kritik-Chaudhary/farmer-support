@@ -136,7 +136,10 @@ export default function AIAssistant() {
 
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onerror = (event) => {
+      console.log('Speech error (likely cancelled):', event.error);
+      setIsSpeaking(false);
+    };
 
     synthRef.current = utterance;
     window.speechSynthesis.speak(utterance);
