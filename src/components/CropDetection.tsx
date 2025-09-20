@@ -66,14 +66,25 @@ export default function CropDetection() {
     return 'text-green-600 bg-green-50';
   };
 
-  const formatToBulletPoints = (text: string, maxPoints: number = 5): string[] => {
-    // Split by common delimiters like periods, semicolons, or numbered lists
-    const sentences = text.split(/[.;]|\d+\.|\d+\)/)
-      .map(s => s.trim())
-      .filter(s => s.length > 10); // Filter out very short segments
+  const formatToShortText = (text: string, maxLength: number = 300): string => {
+    // Clean the text and limit to maxLength characters
+    const cleanText = text.replace(/[.]{2,}/g, '.').replace(/\s+/g, ' ').trim();
+    if (cleanText.length <= maxLength) return cleanText;
     
-    // Take only the first maxPoints items
-    return sentences.slice(0, maxPoints);
+    // Find the last sentence that fits within the limit
+    const sentences = cleanText.split('. ');
+    let result = '';
+    
+    for (const sentence of sentences) {
+      const testResult = result + (result ? '. ' : '') + sentence;
+      if (testResult.length <= maxLength) {
+        result = testResult;
+      } else {
+        break;
+      }
+    }
+    
+    return result + (result && !result.endsWith('.') ? '.' : '');
   };
 
   const speakAnalysis = () => {
@@ -213,74 +224,49 @@ export default function CropDetection() {
           </div>
           
           {/* Problems Section - Red Box */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-5">
-            <h4 className="font-bold text-red-900 mb-3 flex items-center">
+          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+            <h4 className="font-bold text-red-800 mb-3 flex items-center text-lg">
               <AlertTriangle className="h-5 w-5 mr-2" />
               Problems Detected
             </h4>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <h5 className="font-semibold text-red-800 text-sm mb-2">Disease/Problem:</h5>
-                <p className="text-red-700 font-medium mb-3">{analysis.diseaseIdentification}</p>
+                <h5 className="font-semibold text-red-800 mb-1">Disease/Problem:</h5>
+                <p className="text-red-700 font-medium leading-relaxed">
+                  {formatToShortText(analysis.diseaseIdentification, 120)}
+                </p>
               </div>
               
               <div>
-                <h5 className="font-semibold text-red-800 text-sm mb-2">Symptoms Observed:</h5>
-                <ul className="space-y-1">
-                  {formatToBulletPoints(analysis.symptoms, 4).map((symptom, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-600 mr-2">•</span>
-                      <span className="text-red-700 text-sm">{symptom}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div>
-                <h5 className="font-semibold text-red-800 text-sm mb-2">Probable Causes:</h5>
-                <ul className="space-y-1">
-                  {formatToBulletPoints(analysis.causes, 4).map((cause, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-600 mr-2">•</span>
-                      <span className="text-red-700 text-sm">{cause}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h5 className="font-semibold text-red-800 mb-1">Symptoms & Causes:</h5>
+                <p className="text-red-700 leading-relaxed">
+                  {formatToShortText(`${analysis.symptoms} ${analysis.causes}`, 250)}
+                </p>
               </div>
             </div>
           </div>
           
           {/* Solutions Section - Green Box */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-5">
-            <h4 className="font-bold text-green-900 mb-3 flex items-center">
+          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
+            <h4 className="font-bold text-green-800 mb-3 flex items-center text-lg">
               <CheckCircle className="h-5 w-5 mr-2" />
               Recommended Solutions
             </h4>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <h5 className="font-semibold text-green-800 text-sm mb-2">Treatment Steps:</h5>
-                <ul className="space-y-1">
-                  {formatToBulletPoints(analysis.treatment, 5).map((treatment, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-600 mr-2">✓</span>
-                      <span className="text-green-700 text-sm">{treatment}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h5 className="font-semibold text-green-800 mb-1">Treatment Steps:</h5>
+                <p className="text-green-700 leading-relaxed">
+                  {formatToShortText(analysis.treatment, 250)}
+                </p>
               </div>
               
               <div>
-                <h5 className="font-semibold text-green-800 text-sm mb-2">Prevention Measures:</h5>
-                <ul className="space-y-1">
-                  {formatToBulletPoints(analysis.prevention, 5).map((prevention, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-600 mr-2">✓</span>
-                      <span className="text-green-700 text-sm">{prevention}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h5 className="font-semibold text-green-800 mb-1">Prevention Measures:</h5>
+                <p className="text-green-700 leading-relaxed">
+                  {formatToShortText(analysis.prevention, 250)}
+                </p>
               </div>
             </div>
           </div>

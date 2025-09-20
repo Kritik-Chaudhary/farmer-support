@@ -19,18 +19,18 @@ export async function POST(request: NextRequest) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const prompt = `Analyze this crop/plant image and provide a detailed agricultural assessment. Please include:
+    const prompt = `Analyze this crop/plant image and provide a CONCISE agricultural assessment. Keep each section to 2-3 short sentences maximum. Please include:
 
-1. Plant/Crop Identification: What type of plant or crop is this?
-2. Health Assessment: Is the plant healthy or showing signs of disease/problems?
-3. Disease/Problem Identification: If there are issues, what specific diseases, pests, or problems do you see?
-4. Symptoms Description: Describe the visible symptoms (leaf spots, discoloration, wilting, etc.)
-5. Probable Causes: What are the likely causes of any problems identified?
-6. Treatment Recommendations: Suggest specific treatments, fungicides, pesticides, or cultural practices
-7. Prevention Measures: How can similar problems be prevented in the future?
-8. Urgency Level: Rate the urgency of treatment (Low/Medium/High)
+1. Plant/Crop Identification: What type of plant or crop is this? (1 sentence)
+2. Health Assessment: Is the plant healthy or showing disease? (1 sentence)
+3. Disease/Problem Identification: If there are issues, what specific disease/pest? (1-2 sentences max)
+4. Symptoms Description: Main visible symptoms only (2-3 sentences max)
+5. Probable Causes: Key causes only (2-3 sentences max)
+6. Treatment Recommendations: Essential treatments only (3-4 sentences max)
+7. Prevention Measures: Main prevention steps only (3-4 sentences max)
+8. Urgency Level: Rate as Low/Medium/High (1 word)
 
-Please be specific and practical in your recommendations, focusing on solutions available to Indian farmers.`;
+BE CONCISE - Focus on the most important information only. Each section should be brief and actionable for Indian farmers.`;
 
     const imagePart = {
       inlineData: {
@@ -67,15 +67,15 @@ Please be specific and practical in your recommendations, focusing on solutions 
     
     // Return mock analysis if API fails
     const mockAnalysis = {
-      plantType: 'Tomato Plant (Solanum lycopersicum)',
-      healthStatus: 'Moderately Infected - Treatment Required',
-      diseaseIdentification: 'Early Blight (Alternaria solani) with possible secondary bacterial infection',
-      symptoms: 'Brown circular spots with concentric rings on lower leaves. Yellowing of older leaves starting from bottom. Dark lesions on stem near soil line. Slight wilting during hot periods. Premature leaf drop observed.',
-      causes: 'High humidity and warm temperatures. Poor air circulation around plants. Overhead watering causing leaf wetness. Infected soil or plant debris. Nutrient deficiency making plant susceptible.',
-      treatment: 'Apply copper-based fungicide immediately. Remove and destroy infected leaves. Apply Mancozeb or Chlorothalonil spray. Improve drainage around plants. Apply balanced NPK fertilizer. Mulch around base to prevent soil splash.',
-      prevention: 'Practice crop rotation every 2-3 years. Space plants properly for air circulation. Water at base avoiding leaf wetness. Remove plant debris after harvest. Use disease-resistant varieties. Apply preventive fungicide during susceptible periods.',
-      urgency: 'High - Treatment needed within 24-48 hours',
-      fullAnalysis: 'The tomato plant shows classic symptoms of Early Blight disease. Immediate intervention required to prevent spread to healthy plants.'
+      plantType: 'Tomato Plant',
+      healthStatus: 'Diseased - Treatment Required',
+      diseaseIdentification: 'Early Blight disease detected.',
+      symptoms: 'Brown circular spots on leaves. Yellowing starts from bottom leaves. Some wilting during hot weather.',
+      causes: 'High humidity and warm weather. Poor air circulation. Overhead watering wets leaves.',
+      treatment: 'Apply copper fungicide immediately. Remove infected leaves. Improve plant spacing and drainage.',
+      prevention: 'Rotate crops every 2 years. Water at plant base only. Use disease-resistant varieties.',
+      urgency: 'High',
+      fullAnalysis: 'Early Blight disease needs immediate treatment to prevent spread.'
     };
 
     return NextResponse.json({
