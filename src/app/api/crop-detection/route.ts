@@ -67,8 +67,8 @@ BE CONCISE - Focus on the most important information only. Each section should b
     
     // Return mock analysis if API fails
     const mockAnalysis = {
-      plantType: 'Tomato',
-      healthStatus: 'Diseased',
+      plantType: 'Tomato Plant (Solanum lycopersicum). Nightshade family crop. Common vegetable grown worldwide.',
+      healthStatus: 'Moderately Infected - Treatment Required. Disease present in lower leaves. Spreading upward gradually.',
       diseaseIdentification: 'Early Blight disease detected.',
       symptoms: 'Brown circular spots on leaves. Yellowing starts from bottom leaves. Some wilting during hot weather.',
       causes: 'High humidity and warm weather. Poor air circulation. Overhead watering wets leaves.',

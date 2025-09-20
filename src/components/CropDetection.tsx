@@ -87,15 +87,14 @@ export default function CropDetection() {
     return result + (result && !result.endsWith('.') ? '.' : '');
   };
 
-  const formatBasicInfo = (text: string, maxWords: number = 8): string => {
-    // Clean the text and extract the first meaningful words
-    const cleanText = text.replace(/[()\[\]]/g, '').replace(/\s+/g, ' ').trim();
-    const words = cleanText.split(' ');
+  const formatToBulletPoints = (text: string, maxPoints: number = 3): string[] => {
+    // Split by common delimiters like periods, semicolons, or numbered lists
+    const sentences = text.split(/[.;]|\d+\.|\d+\)/)
+      .map(s => s.trim())
+      .filter(s => s.length > 15); // Filter out very short segments
     
-    if (words.length <= maxWords) return cleanText;
-    
-    // Take first maxWords and add '...' if truncated
-    return words.slice(0, maxWords).join(' ') + '...';
+    // Take only the first maxPoints items
+    return sentences.slice(0, maxPoints);
   };
 
   const speakAnalysis = () => {
@@ -218,22 +217,40 @@ export default function CropDetection() {
           
           {/* Basic Info Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-3 rounded-lg">
               <h4 className="text-sm font-semibold text-gray-600 mb-2">Crop Type</h4>
-              <p className="text-lg font-bold text-gray-900 leading-tight">
-                {formatBasicInfo(analysis.plantType, 4)}
-              </p>
+              {formatToBulletPoints(analysis.plantType, 2).length > 0 ? (
+                <ul className="space-y-1">
+                  {formatToBulletPoints(analysis.plantType, 2).map((point, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-blue-600 mr-1 text-xs">•</span>
+                      <span className="text-xs font-medium text-gray-800 leading-relaxed">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm font-bold text-gray-900">{analysis.plantType}</p>
+              )}
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-3 rounded-lg">
               <h4 className="text-sm font-semibold text-gray-600 mb-2">Health Status</h4>
-              <p className="text-sm font-bold text-gray-900 leading-tight">
-                {formatBasicInfo(analysis.healthStatus, 6)}
-              </p>
+              {formatToBulletPoints(analysis.healthStatus, 2).length > 0 ? (
+                <ul className="space-y-1">
+                  {formatToBulletPoints(analysis.healthStatus, 2).map((point, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-blue-600 mr-1 text-xs">•</span>
+                      <span className="text-xs font-medium text-gray-800 leading-relaxed">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm font-bold text-gray-900">{analysis.healthStatus}</p>
+              )}
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-3 rounded-lg">
               <h4 className="text-sm font-semibold text-gray-600 mb-2">Urgency Level</h4>
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${getUrgencyColor(analysis.urgency)}`}>
-                {formatBasicInfo(analysis.urgency, 2)}
+                {analysis.urgency}
               </span>
             </div>
           </div>
