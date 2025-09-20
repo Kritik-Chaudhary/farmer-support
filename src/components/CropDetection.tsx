@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Camera, Upload, CheckCircle, Volume2, AlertTriangle, Leaf } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +25,53 @@ export default function CropDetection() {
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Function to stop speech synthesis
+  const stopSpeech = useCallback(() => {
+    if (isSpeaking && 'speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      console.log('Speech interrupted');
+    }
+  }, [isSpeaking]);
+
+  // Stop speech on component unmount
+  useEffect(() => {
+    return () => {
+      stopSpeech();
+    };
+  }, [stopSpeech]);
+
+  // Stop speech when user navigates away or page visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopSpeech();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      stopSpeech();
+    };
+
+    const handlePopState = () => {
+      stopSpeech();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [stopSpeech]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Stop any ongoing speech when new image is selected
+    stopSpeech();
+    
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
@@ -41,6 +87,9 @@ export default function CropDetection() {
   const analyzeImage = async () => {
     if (!selectedImage) return;
 
+    // Stop any ongoing speech when starting new analysis
+    stopSpeech();
+    
     setLoading(true);
     const formData = new FormData();
     formData.append('image', selectedImage);

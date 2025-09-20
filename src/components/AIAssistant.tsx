@@ -149,8 +149,40 @@ export default function AIAssistant() {
     }
   };
 
+  // Stop speech on component unmount or navigation
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopSpeaking();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      stopSpeaking();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      stopSpeaking(); // Stop speech when component unmounts
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // Stop speech when sending new message
+  const stopSpeechBeforeAction = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+    }
+  };
+
   const sendMessage = async (isVoice = false) => {
     if (!inputMessage.trim()) return;
+
+    // Stop any ongoing speech before sending new message
+    stopSpeechBeforeAction();
 
     const userMessage: Message = {
       id: Date.now().toString(),

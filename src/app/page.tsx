@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
 import AIAssistant from '@/components/AIAssistant';
@@ -13,6 +13,19 @@ import LanguageProvider from '@/components/LanguageProvider';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Function to stop any ongoing speech
+  const stopGlobalSpeech = () => {
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      console.log('Global speech stopped due to navigation');
+    }
+  };
+
+  // Stop speech when changing tabs
+  useEffect(() => {
+    stopGlobalSpeech();
+  }, [activeTab]);
 
   return (
     <LanguageProvider>
