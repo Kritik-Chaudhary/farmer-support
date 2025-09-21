@@ -85,6 +85,7 @@ export default function AIAssistant() {
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputMessageRef = useRef<string>('');
 
   const languages = [
     { code: 'en', name: 'English', voice: 'en-US' },
@@ -119,9 +120,11 @@ export default function AIAssistant() {
           .join('');
         
         setInputMessage(transcript);
+        inputMessageRef.current = transcript;
       };
 
       recognitionRef.current.onend = () => {
+        console.log('Recognition ended');
         setIsListening(false);
         setRecognitionActive(false);
         startingRecognitionRef.current = false;
@@ -293,15 +296,17 @@ export default function AIAssistant() {
     if (recognitionRef.current && isListening) {
       try {
         recognitionRef.current.stop();
+        // Manually trigger send message for voice mode after stopping
+        setTimeout(() => {
+          const currentInput = inputMessageRef.current.trim();
+          if (chatMode === 'voice' && currentInput) {
+            console.log('Sending voice message:', currentInput);
+            sendMessage(true);
+          }
+        }, 200); // Small delay to ensure input is captured
       } catch (error) {
         // Ignore errors when stopping recognition
         console.log('Recognition stop error (ignored):', error);
-      }
-      setIsListening(false);
-      setRecognitionActive(false);
-      // Auto-send in voice mode when voice stops
-      if (inputMessage.trim() && chatMode === 'voice') {
-        sendMessage(true);
       }
     }
   };
@@ -386,22 +391,30 @@ export default function AIAssistant() {
   };
 
   const sendMessage = async (isVoice = false) => {
-    if (!inputMessage.trim()) return;
+    const messageText = inputMessage.trim();
+    if (!messageText) {
+      console.log('No message to send');
+      return;
+    }
+    
+    console.log('Sending message:', messageText);
+    
+    // Clear input immediately
+    setInputMessage('');
+    inputMessageRef.current = '';
 
     // Stop any ongoing speech before sending new message
     stopSpeechBeforeAction();
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputMessage,
+      text: messageText,
       sender: 'user',
       timestamp: new Date(),
       isVoice
     };
 
     setMessages(prev => [...prev, userMessage]);
-    const messageToSend = inputMessage;
-    setInputMessage('');
     setIsLoading(true);
 
     try {
@@ -409,7 +422,7 @@ export default function AIAssistant() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message: messageToSend,
+          message: messageText,
           language: selectedLanguage 
         })
       });
@@ -439,9 +452,13 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Speak the response if in voice mode or if it was a voice message
+      // Speak the response in background if in voice mode or if it was a voice message
       if (chatMode === 'voice' || isVoice) {
-        speakText(assistantMessage.text);
+        // Speak the text after a short delay to ensure UI updates first
+        setTimeout(() => {
+          speakText(assistantMessage.text);
+        }, 100);
+        
         // Auto-restart listening after response in voice mode
         if (chatMode === 'voice') {
           setAutoRestartAfterResponse(true);
@@ -742,20 +759,43 @@ export default function AIAssistant() {
                 </div>
               )}
               
-              {/* Large Voice Button */}
+              {/* Large Voice Button with different states */}
               <button
                 onClick={toggleVoiceListening}
-                disabled={microphonePermission === 'denied' || isLoading}
-                className={`relative p-12 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isListening 
+                disabled={microphonePermission === 'denied' || isLoading || isSpeaking}
+                className={`relative p-12 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${
+                  isLoading
+                    ? 'bg-yellow-500 text-white shadow-2xl animate-pulse'
+                    : isListening 
                     ? 'bg-red-500 text-white shadow-2xl scale-110' 
+                    : isSpeaking
+                    ? 'bg-blue-500 text-white shadow-xl'
                     : microphonePermission === 'denied'
-                    ? 'bg-gray-400 text-white'
+                    ? 'bg-gray-400 text-white opacity-50'
                     : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105'
                 }`}
-                title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
+                title={
+                  isLoading ? 'AI is thinking...' :
+                  isSpeaking ? 'AI is speaking...' :
+                  microphonePermission === 'denied' ? 'Microphone access denied' : 
+                  'Click to speak'
+                }
               >
-                {isListening ? (
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin">
+                      <Bot className="h-16 w-16" />
+                    </div>
+                    {/* Animated rings for thinking state */}
+                    <div className="absolute inset-0 rounded-full border-4 border-yellow-300 animate-ping"></div>
+                  </>
+                ) : isSpeaking ? (
+                  <>
+                    <Volume2 className="h-16 w-16 animate-pulse" />
+                    {/* Animated rings for speaking state */}
+                    <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping"></div>
+                  </>
+                ) : isListening ? (
                   <>
                     <MicOff className="h-16 w-16" />
                     {/* Animated rings for listening state */}
@@ -769,7 +809,29 @@ export default function AIAssistant() {
               
               {/* Voice Status Text */}
               <div className="space-y-2">
-                {isListening ? (
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <p className="text-xl font-bold text-yellow-600 animate-pulse">
+                      🤔 {selectedLanguage === 'hi' ? 'सोच रहे हैं...' : 'Thinking...'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedLanguage === 'hi' 
+                        ? 'AI आपके सवाल का जवाब तैयार कर रहा है'
+                        : 'AI is preparing your answer'}
+                    </p>
+                  </div>
+                ) : isSpeaking ? (
+                  <div className="space-y-2">
+                    <p className="text-xl font-bold text-blue-600 animate-pulse">
+                      🗣️ {selectedLanguage === 'hi' ? 'बोल रहे हैं...' : 'Speaking...'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedLanguage === 'hi' 
+                        ? 'AI आपको जवाब सुना रहा है'
+                        : 'AI is speaking the answer'}
+                    </p>
+                  </div>
+                ) : isListening ? (
                   <div className="space-y-2">
                     <p className="text-xl font-bold text-red-600 animate-pulse">
                       🔴 {selectedLanguage === 'hi' ? 'सुन रहे हैं...' : 'Listening...'}
