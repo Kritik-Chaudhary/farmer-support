@@ -31,8 +31,6 @@ interface WeatherData {
 export default function WeatherAlerts() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [city, setCity] = useState('');
-  const [inputCity, setInputCity] = useState('');
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
 
   useEffect(() => {
@@ -41,10 +39,10 @@ export default function WeatherAlerts() {
   }, []);
 
   useEffect(() => {
-    if (userLocation || city) {
+    if (userLocation) {
       fetchWeather();
     }
-  }, [userLocation, city]);
+  }, [userLocation]);
 
   const getUserLocation = () => {
     // Try browser geolocation first
@@ -72,20 +70,14 @@ export default function WeatherAlerts() {
     setLoading(true);
     try {
       let url = '/api/weather';
-      const params = new URLSearchParams();
       
       if (userLocation) {
+        const params = new URLSearchParams();
         params.append('lat', userLocation.lat.toString());
         params.append('lon', userLocation.lon.toString());
-      } else if (city) {
-        params.append('city', city);
+        url += `?${params.toString()}`;
       }
-      // If neither location nor city, API will use IP detection
-      
-      const queryString = params.toString();
-      if (queryString) {
-        url += `?${queryString}`;
-      }
+      // If no location, API will use IP detection
       
       const response = await fetch(url);
       const data = await response.json();
@@ -97,13 +89,6 @@ export default function WeatherAlerts() {
     }
   };
 
-  const handleSearch = () => {
-    if (inputCity.trim()) {
-      setUserLocation(null); // Clear coordinates when searching by city
-      setCity(inputCity.trim());
-      setInputCity('');
-    }
-  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -136,37 +121,13 @@ export default function WeatherAlerts() {
           <MapPin className="h-4 w-4 text-blue-600" />
           <span>
             {userLocation ? 
-              '📍 Using your current location' : 
-              city ? 
-                `Showing weather for: ${weatherData.current.location}` : 
-                '🌐 Location detected from IP address'
+              '📍 Using your current GPS location' : 
+              '🌐 Location automatically detected'
             }
           </span>
         </div>
       )}
       
-      {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="flex space-x-2">
-          <div className="flex-1 relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <input
-              type="text"
-              value={inputCity}
-              onChange={(e) => setInputCity(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter city name..."
-              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white"
-            />
-          </div>
-          <button
-            onClick={handleSearch}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Search
-          </button>
-        </div>
-      </div>
 
       {/* Current Weather */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-4 md:p-8">

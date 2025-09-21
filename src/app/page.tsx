@@ -41,12 +41,6 @@ export default function Home() {
           {activeTab === 'schemes' && <GovernmentSchemes />}
         </main>
         
-        <footer className="bg-green-800 text-white py-6 mt-12 mb-16 md:mb-0">
-          <div className="container mx-auto px-4 text-center">
-            <p className="text-sm md:text-base">&copy; 2024 Farmer Support App. Empowering farmers with technology and information.</p>
-          </div>
-        </footer>
-        
         {/* Bottom Navigation for Mobile */}
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>

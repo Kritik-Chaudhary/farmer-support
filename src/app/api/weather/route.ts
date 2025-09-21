@@ -1,12 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
+interface IpApiComResponse {
+  status: string;
+  country: string;
+  countryCode: string;
+  region: string;
+  regionName: string;
+  city: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  timezone: string;
+  query: string;
+}
+
+interface IpApiCoResponse {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country_name: string;
+}
+
+interface IpGeolocationIoResponse {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country_name: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const city = searchParams.get('city') || 'Delhi';
     let lat = searchParams.get('lat');
     let lon = searchParams.get('lon');
+    let locationName = city; // Initialize location name
 
     // If no coordinates provided, get them from IP or use default cities
     if (!lat || !lon) {
@@ -34,16 +63,79 @@ export async function GET(request: NextRequest) {
         'Agra': { lat: 27.1767, lon: 78.0081 }
       };
 
-      // Try to get location from IP
-      try {
-        const ipResponse = await axios.get('https://ipapi.co/json/');
-        lat = ipResponse.data.latitude?.toString() || '28.6139';
-        lon = ipResponse.data.longitude?.toString() || '77.2090';
-      } catch {
+      // Enhanced IP-based location detection
+      console.log('Detecting location from IP...');
+      
+      // Get the user's IP address from the request headers
+      const forwardedFor = request.headers.get('x-forwarded-for');
+      const realIp = request.headers.get('x-real-ip');
+      const userIP = forwardedFor?.split(',')[0] || realIp || 'unknown';
+      
+      console.log(`User IP: ${userIP}`);
+      
+      let locationDetected = false;
+      
+      // Try multiple IP geolocation services for better reliability
+      const ipServices = [
+        {
+          url: `http://ip-api.com/json/${userIP}?fields=status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,query`,
+          parser: (data: IpApiComResponse) => ({
+            lat: data.lat?.toString(),
+            lon: data.lon?.toString(),
+            city: data.city,
+            country: data.country,
+            valid: data.status === 'success' && data.lat && data.lon
+          })
+        },
+        {
+          url: 'https://ipapi.co/json/',
+          parser: (data: IpApiCoResponse) => ({
+            lat: data.latitude?.toString(),
+            lon: data.longitude?.toString(),
+            city: data.city,
+            country: data.country_name,
+            valid: data.latitude && data.longitude
+          })
+        },
+        {
+          url: `https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=${userIP}`,
+          parser: (data: IpGeolocationIoResponse) => ({
+            lat: data.latitude?.toString(),
+            lon: data.longitude?.toString(),
+            city: data.city,
+            country: data.country_name,
+            valid: data.latitude && data.longitude
+          })
+        }
+      ];
+      
+      for (const service of ipServices) {
+        try {
+          console.log(`Trying IP service: ${service.url}`);
+          const ipResponse = await axios.get(service.url, { timeout: 5000 });
+          const locationData = service.parser(ipResponse.data);
+          
+          if (locationData.valid) {
+            lat = locationData.lat;
+            lon = locationData.lon;
+            locationName = locationData.city || city;
+            locationDetected = true;
+            console.log(`Location detected: ${locationName} (${lat}, ${lon})`);
+            break;
+          }
+        } catch (error) {
+          console.log(`IP service failed: ${service.url}, ${error}`);
+          continue;
+        }
+      }
+      
+      if (!locationDetected) {
+        console.log('IP location detection failed, using fallback coordinates');
         // Use city coordinates or default to Delhi
         const coords = cityCoordinates[city] || cityCoordinates['Delhi'];
         lat = coords.lat.toString();
         lon = coords.lon.toString();
+        locationName = city;
       }
     }
 
@@ -60,9 +152,22 @@ export async function GET(request: NextRequest) {
       forecast_days: 5
     };
 
-    // Get weather data from Open-Meteo
-    const weatherResponse = await axios.get(weatherUrl, { params });
-    const weatherData = weatherResponse.data;
+    // Get weather data from Open-Meteo with enhanced error handling
+    console.log(`Fetching weather data for coordinates: ${lat}, ${lon}`);
+    
+    let weatherData;
+    try {
+      const weatherResponse = await axios.get(weatherUrl, { params, timeout: 10000 });
+      weatherData = weatherResponse.data;
+      console.log('Weather data fetched successfully');
+      
+      if (!weatherData || !weatherData.current) {
+        throw new Error('Invalid weather data structure');
+      }
+    } catch (error: unknown) {
+      console.error('Failed to fetch weather data:', (error instanceof Error) ? error.message : error);
+      throw new Error('Weather service unavailable');
+    }
 
     // Helper function to get weather description from code
     const getWeatherDescription = (code: number) => {
@@ -99,7 +204,6 @@ export async function GET(request: NextRequest) {
     const currentWeatherCode = getWeatherDescription(currentWeather.weather_code || 0);
     
     // Try to reverse geocode to get city name
-    let locationName = city;
     try {
       const geocodeResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
       locationName = geocodeResponse.data.address?.city || 
