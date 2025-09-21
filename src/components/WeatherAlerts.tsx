@@ -31,65 +31,27 @@ interface WeatherData {
 export default function WeatherAlerts() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
-  const [locationSource, setLocationSource] = useState<'ip' | 'gps' | null>(null);
 
   useEffect(() => {
-    // First load IP-based weather immediately
+    // Use only IP-based weather detection for reliability
     fetchWeather();
-    setLocationSource('ip');
-    
-    // Then try to get GPS location for better accuracy
-    getUserLocation();
   }, []); // Only run once on mount
 
-  useEffect(() => {
-    if (userLocation) {
-      // Update with GPS-based weather
-      fetchWeather();
-      setLocationSource('gps');
-    }
-  }, [userLocation]); // fetchWeather is stable, userLocation is the dependency
+  // Commented out GPS location detection as it shows wrong results
+  // useEffect(() => {
+  //   if (userLocation) {
+  //     fetchWeather();
+  //     setLocationSource('gps');
+  //   }
+  // }, [userLocation]);
 
-  const getUserLocation = () => {
-    // Try browser geolocation first
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          console.log('GPS location obtained:', position.coords.latitude, position.coords.longitude);
-          setUserLocation({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log('Geolocation error:', error.message, 'falling back to IP detection');
-          // If browser location fails, API will use IP detection
-          fetchWeather();
-        },
-        { timeout: 10000, enableHighAccuracy: false }
-      );
-    } else {
-      console.log('Geolocation not supported, using IP detection');
-      // If geolocation not supported, API will use IP detection
-      fetchWeather();
-    }
-  };
+  // GPS location detection removed - using IP-based detection only
 
   const fetchWeather = async () => {
     setLoading(true);
     try {
-      let url = '/api/weather';
-      
-      if (userLocation) {
-        const params = new URLSearchParams();
-        params.append('lat', userLocation.lat.toString());
-        params.append('lon', userLocation.lon.toString());
-        url += `?${params.toString()}`;
-      }
-      // If no location, API will use IP detection
-      
-      const response = await fetch(url);
+      // Always use IP-based location detection (no GPS coordinates passed)
+      const response = await fetch('/api/weather');
       const data = await response.json();
       setWeatherData(data);
     } catch (error) {
@@ -130,15 +92,7 @@ export default function WeatherAlerts() {
         <div className="flex items-center gap-2 text-sm text-gray-700 font-medium bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg">
           <MapPin className="h-4 w-4 text-blue-600" />
           <span>
-            {locationSource === 'gps' ? 
-              '📍 Using your precise GPS location' : 
-              locationSource === 'ip' ?
-                '🌐 Location detected from your network' :
-                '🔍 Detecting your location...'
-            }
-            {locationSource === 'ip' && !userLocation && (
-              <span className="ml-2 text-blue-600 animate-pulse">• Checking GPS...</span>
-            )}
+            🌐 Location automatically detected from your network
           </span>
         </div>
       )}

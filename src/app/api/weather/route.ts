@@ -43,14 +43,9 @@ export async function GET(request: NextRequest) {
     let lat = searchParams.get('lat');
     let lon = searchParams.get('lon');
     let locationName = ''; // Initialize location name
-    let isGPSLocation = false;
 
-    // Check if GPS coordinates are provided (more accurate)
-    if (lat && lon) {
-      isGPSLocation = true;
-      console.log(`Using GPS coordinates: ${lat}, ${lon}`);
-    } else {
-      // Use IP-based location detection
+    // Only use IP-based location detection for reliability
+    if (!lat || !lon) {
       // Default coordinates for major Indian cities
       const cityCoordinates: { [key: string]: { lat: number; lon: number } } = {
         'Delhi': { lat: 28.6139, lon: 77.2090 },
@@ -224,9 +219,8 @@ export async function GET(request: NextRequest) {
     const currentWeather = weatherData.current || {};
     const currentWeatherCode = getWeatherDescription(currentWeather.weather_code || 0);
     
-    // For GPS coordinates, always try reverse geocoding for accurate location
-    // For IP-detected locations, use reverse geocoding only if we don't have a good name already
-    if (isGPSLocation || !locationName || locationName === 'Detected Location') {
+    // For IP-detected locations, use reverse geocoding to get more accurate city name
+    if (!locationName || locationName === 'Detected Location') {
       console.log(`Attempting reverse geocoding for coordinates: ${lat}, ${lon}`);
       try {
         const geocodeResponse = await axios.get(
@@ -238,12 +232,10 @@ export async function GET(request: NextRequest) {
           const address = geocodeResponse.data.address;
           console.log('Reverse geocode response:', JSON.stringify(address, null, 2));
           
-          // For GPS coordinates, be more specific with location naming
+          // Get the best available location name
           const detectedLocationName = address.city || 
                                       address.town || 
                                       address.village || 
-                                      address.suburb ||
-                                      address.neighbourhood ||
                                       address.state_district ||
                                       address.county;
           
@@ -261,7 +253,7 @@ export async function GET(request: NextRequest) {
         console.log('Reverse geocoding failed:', errorMessage);
         
         if (!locationName) {
-          locationName = isGPSLocation ? 'Your Location' : 'Detected Location';
+          locationName = 'Your Location';
         }
       }
     } else {
