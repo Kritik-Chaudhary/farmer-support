@@ -10,15 +10,17 @@ import {
   Thermometer,
   Droplets
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
 }
 
 export default function Dashboard({ setActiveTab }: DashboardProps) {
+  const { t } = useTranslation();
   const features = [
     {
-      title: 'AI Farming Assistant',
+      title: t('assistant.title'),
       description: 'Get instant answers about crops, weather, and farming practices',
       icon: MessageCircle,
       color: 'bg-blue-500',
@@ -26,7 +28,7 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       tabKey: 'assistant'
     },
     {
-      title: 'Mandi Prices',
+      title: t('mandi.title'),
       description: 'Real-time market prices for your crops across different mandis',
       icon: TrendingUp,
       color: 'bg-green-500',
@@ -34,7 +36,7 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       tabKey: 'mandi'
     },
     {
-      title: 'Weather Alerts',
+      title: t('weather.title'),
       description: 'Get weather forecasts and alerts for your farming area',
       icon: Cloud,
       color: 'bg-yellow-500',
@@ -42,15 +44,15 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       tabKey: 'weather'
     },
     {
-      title: 'Crop Health Check',
-      description: 'AI-powered crop disease detection and treatment recommendations',
+      title: t('crop.title'),
+      description: t('crop.subtitle'),
       icon: Camera,
       color: 'bg-red-500',
       stats: '95% Accuracy',
       tabKey: 'crop-detection'
     },
     {
-      title: 'Government Schemes',
+      title: t('schemes.title'),
       description: 'Browse and apply for farmer welfare schemes and subsidies',
       icon: FileText,
       color: 'bg-purple-500',

@@ -29,20 +29,25 @@ export default function AIAssistant() {
     return welcomeMessages[lang as keyof typeof welcomeMessages] || welcomeMessages.en;
   };
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: getWelcomeMessage('en'),
-      sender: 'assistant',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  
+  // Use the global language from i18n
+  const selectedLanguage = i18n.language;
+  
+  // Initialize messages when component mounts or language changes
+  useEffect(() => {
+    setMessages([{
+      id: '1',
+      text: getWelcomeMessage(selectedLanguage),
+      sender: 'assistant',
+      timestamp: new Date()
+    }]);
+  }, [selectedLanguage]);
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -238,26 +243,7 @@ export default function AIAssistant() {
     }
   };
 
-  const changeLanguage = (langCode: string) => {
-    setSelectedLanguage(langCode);
-    i18n.changeLanguage(langCode);
-    
-    // Update speech recognition language
-    if (recognitionRef.current) {
-      const currentLang = languages.find(l => l.code === langCode);
-      recognitionRef.current.lang = currentLang?.voice || 'en-US';
-    }
-    
-    // Update welcome message with new language
-    setMessages([
-      {
-        id: '1',
-        text: getWelcomeMessage(langCode),
-        sender: 'assistant',
-        timestamp: new Date()
-      }
-    ]);
-  };
+  // No need for local changeLanguage - using global i18n.changeLanguage
 
   const suggestedQuestions = {
     en: [
@@ -330,7 +316,7 @@ export default function AIAssistant() {
               <Languages className="h-4 w-4 text-white" />
               <select
                 value={selectedLanguage}
-                onChange={(e) => changeLanguage(e.target.value)}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
                 className="bg-white/25 backdrop-blur text-white font-medium border border-white/40 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
               >
                 {languages.map(lang => (

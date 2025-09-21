@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Cloud, AlertCircle, Droplets, Thermometer, Wind, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface WeatherData {
   current: {
@@ -29,6 +30,7 @@ interface WeatherData {
 }
 
 export default function WeatherAlerts() {
+  const { t } = useTranslation();
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 

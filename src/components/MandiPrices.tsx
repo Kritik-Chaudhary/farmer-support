@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface MandiPrice {
   state: string;
@@ -16,6 +17,7 @@ interface MandiPrice {
 }
 
 export default function MandiPrices() {
+  const { t } = useTranslation();
   const [prices, setPrices] = useState<MandiPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,52 +83,21 @@ export default function MandiPrices() {
     { code: 'UC', name: 'Uttrakhand' },
     { code: 'WB', name: 'West Bengal' }
   ];
-  const commodities = [
-    'Wheat',
-    'Rice',
-    'Paddy',
-    'Maize',
-    'Jowar',
-    'Bajra',
-    'Barley',
-    'Gram',
-    'Tur/Arhar',
-    'Moong',
-    'Urad',
-    'Masur',
-    'Cotton',
-    'Groundnut',
-    'Soybean',
-    'Sunflower',
-    'Mustard',
-    'Sesame',
-    'Sugarcane',
-    'Onion',
-    'Potato',
-    'Tomato',
-    'Brinjal',
-    'Okra/Lady Finger',
-    'Cauliflower',
-    'Cabbage',
-    'Green Chilli',
-    'Capsicum',
-    'Ginger',
-    'Garlic',
-    'Turmeric',
-    'Apple',
-    'Banana',
-    'Mango',
-    'Orange',
-    'Grapes',
-    'Pomegranate',
-    'Coconut',
-    'Arecanut',
-    'Tea',
-    'Coffee',
-    'Rubber',
-    'Black Pepper',
-    'Cardamom'
-  ];
+  // Create a function to get translated commodity names
+  const getTranslatedCommodities = () => {
+    const commodityKeys = [
+      'wheat', 'rice', 'paddy', 'maize', 'jowar', 'bajra', 'barley', 'gram',
+      'tur', 'moong', 'urad', 'masur', 'cotton', 'groundnut', 'soybean',
+      'sunflower', 'mustard', 'sesame', 'sugarcane', 'onion', 'potato',
+      'tomato', 'brinjal', 'okra', 'cauliflower', 'cabbage', 'greenChilli',
+      'capsicum', 'ginger', 'garlic', 'turmeric', 'apple', 'banana',
+      'mango', 'orange', 'grapes', 'pomegranate', 'coconut', 'arecanut',
+      'tea', 'coffee', 'rubber', 'blackPepper', 'cardamom'
+    ];
+    return commodityKeys.map(key => t(`commodities.${key}`));
+  };
+  
+  const commodities = getTranslatedCommodities();
 
   const filteredPrices = prices.filter(price =>
     price.commodity.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -140,33 +111,33 @@ export default function MandiPrices() {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
           <TrendingUp className="h-6 w-6 mr-2 text-green-600" />
-          Live Mandi Prices
+          {t('mandi.title')}
         </h2>
         
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('mandi.search')}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search commodity or market..."
+                placeholder={t('mandi.searchPlaceholder')}
                 className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">State/UT</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('mandi.state')}</label>
             <select
               value={selectedState}
               onChange={(e) => setSelectedState(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium bg-white"
             >
-              <option value="" className="text-gray-900 font-medium">All States/UTs</option>
+              <option value="" className="text-gray-900 font-medium">{t('mandi.allStates')}</option>
               {states.map(state => (
                 <option key={state.code} value={state.code} className="text-gray-900 font-medium">{state.name}</option>
               ))}
@@ -174,13 +145,13 @@ export default function MandiPrices() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Commodity</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('mandi.commodity')}</label>
             <select
               value={selectedCommodity}
               onChange={(e) => setSelectedCommodity(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium bg-white"
             >
-              <option value="" className="text-gray-900 font-medium">All Commodities</option>
+              <option value="" className="text-gray-900 font-medium">{t('mandi.allCommodities')}</option>
               {commodities.map(commodity => (
                 <option key={commodity} value={commodity} className="text-gray-900 font-medium">{commodity}</option>
               ))}
@@ -193,7 +164,7 @@ export default function MandiPrices() {
       <div className="md:hidden bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm text-blue-800 font-medium">
         <p className="flex items-center">
           <span className="mr-2">ℹ️</span>
-          Swipe left/right to see all columns
+          {t('mandi.swipeHint')}
         </p>
       </div>
 
@@ -204,25 +175,25 @@ export default function MandiPrices() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Commodity
+                  {t('mandi.commodity')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Market
+                  {t('mandi.market')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  District
+                  {t('mandi.district')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  State
+                  {t('mandi.state')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Min Price (₹/Quintal)
+                  {t('mandi.minPrice')} {t('mandi.perQuintal')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Max Price (₹/Quintal)
+                  {t('mandi.maxPrice')} {t('mandi.perQuintal')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Modal Price (₹/Quintal)
+                  {t('mandi.modalPrice')} {t('mandi.perQuintal')}
                 </th>
               </tr>
             </thead>
