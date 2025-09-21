@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2, Send, Languages, Bot, User } from 'lucide-react';
+import { Mic, MicOff, Volume2, Send, Languages, Bot, User, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface Message {
@@ -34,6 +34,7 @@ export default function AIAssistant() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [chatMode, setChatMode] = useState<'text' | 'voice'>('text');
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [microphoneError, setMicrophoneError] = useState<string>('');
   const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
@@ -416,8 +417,8 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Speak the response if voice is enabled
-      if (voiceEnabled && isVoice) {
+      // Speak the response if in voice mode or if it was a voice message
+      if (chatMode === 'voice' || isVoice) {
         speakText(assistantMessage.text);
       }
     } catch (error) {
@@ -533,47 +534,86 @@ export default function AIAssistant() {
           </div>
         </div>
 
-        {/* Voice Mode Toggle */}
+        {/* Chat Mode Toggle */}
         <div className="px-4 py-2 border-b bg-gray-50 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-                setVoiceEnabled(!voiceEnabled);
-                if (microphoneError) setMicrophoneError('');
-              }}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                voiceEnabled 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {voiceEnabled ? (
+            {/* Mode Toggle Buttons */}
+            <div className="flex bg-white border border-gray-300 rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setChatMode('text');
+                  setVoiceEnabled(false);
+                  if (microphoneError) setMicrophoneError('');
+                  if (isListening) stopListening();
+                  if (isSpeaking) stopSpeaking();
+                }}
+                className={`flex items-center px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                  chatMode === 'text'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <MessageCircle className="h-3 w-3 mr-1" />
+                {selectedLanguage === 'hi' ? 'टेक्स्ट चैट' : 'Text Chat'}
+              </button>
+              <button
+                onClick={() => {
+                  setChatMode('voice');
+                  setVoiceEnabled(true);
+                  if (microphoneError) setMicrophoneError('');
+                }}
+                className={`flex items-center px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                  chatMode === 'voice'
+                    ? 'bg-green-500 text-white shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Mic className="h-3 w-3 mr-1" />
+                {selectedLanguage === 'hi' ? 'वॉयस चैट' : 'Voice Chat'}
+              </button>
+            </div>
+
+            {/* Voice Controls - Only show in voice mode */}
+            {chatMode === 'voice' && (
+              <>
+                {isSpeaking && (
+                  <button
+                    onClick={stopSpeaking}
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium transition-colors hover:bg-red-200"
+                  >
+                    <Volume2 className="h-3 w-3 inline mr-1" />
+                    {selectedLanguage === 'hi' ? 'रोकें' : 'Stop'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* Mode Indicator */}
+            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+              chatMode === 'voice' 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-blue-100 text-blue-700'
+            }`}>
+              {chatMode === 'voice' ? (
                 <span className="flex items-center">
                   <Mic className="h-3 w-3 mr-1" />
-                  {t('assistant.voiceEnabled')}
+                  {selectedLanguage === 'hi' ? 'वॉयस मोड' : 'Voice Mode'}
                 </span>
               ) : (
                 <span className="flex items-center">
-                  <MicOff className="h-3 w-3 mr-1" />
-                  {t('assistant.textMode')}
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  {selectedLanguage === 'hi' ? 'टेक्स्ट मोड' : 'Text Mode'}
                 </span>
               )}
-            </button>
-            {isSpeaking && (
-              <button
-                onClick={stopSpeaking}
-                className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm"
-              >
-                <Volume2 className="h-3 w-3 inline mr-1" />
-                {t('assistant.stopSpeaking')}
-              </button>
-            )}
-          </div>
-          <div className="text-xs text-gray-500">
-            {isListening && (
-              <span className="flex items-center text-red-600">
-                <span className="animate-pulse mr-2">•</span>
-                {t('assistant.listening')}
+            </div>
+            
+            {/* Listening Indicator - Only in voice mode */}
+            {chatMode === 'voice' && isListening && (
+              <span className="flex items-center text-green-600">
+                <span className="animate-pulse mr-2">🎤</span>
+                {selectedLanguage === 'hi' ? 'सुन रहे हैं...' : 'Listening...'}
               </span>
             )}
           </div>
@@ -662,57 +702,103 @@ export default function AIAssistant() {
           </div>
         </div>
 
-        {/* Input */}
+        {/* Input - Different UI based on chat mode */}
         <div className="p-4 border-t">
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder={t('assistant.placeholder')}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white disabled:bg-gray-100"
-              disabled={isListening}
-            />
-            {voiceEnabled && (
-              <button
-                onMouseDown={startListening}
-                onMouseUp={stopListening}
-                onTouchStart={startListening}
-                onTouchEnd={stopListening}
-                disabled={microphonePermission === 'denied'}
-                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isListening 
-                    ? 'bg-red-500 text-white animate-pulse' 
-                    : microphonePermission === 'denied'
-                    ? 'bg-gray-400 text-white'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-                title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
-              >
-                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </button>
-            )}
-            <button
-              onClick={() => sendMessage()}
-              disabled={isLoading || !inputMessage.trim()}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
-          {voiceEnabled && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              {microphonePermission === 'denied' ? (
-                <span className="text-red-600">
-                  {selectedLanguage === 'hi' 
-                    ? 'माइक्रोफोन एक्सेस की आवश्यकता है | ब्राउज़र सेटिंग्स जांचें'
-                    : 'Microphone access required | Check browser settings'}
-                </span>
-              ) : (
-                t('assistant.holdToSpeak')
-              )}
-            </p>
+          {chatMode === 'text' ? (
+            /* Text Chat Mode */
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder={selectedLanguage === 'hi' 
+                    ? 'अपना सवाल टाइप करें...'
+                    : 'Type your question...'}
+                  className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 font-medium placeholder-gray-500 bg-white transition-colors"
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 transition-colors font-medium flex items-center space-x-2"
+                >
+                  <Send className="h-5 w-5" />
+                  <span className="hidden sm:inline">{selectedLanguage === 'hi' ? 'भेजें' : 'Send'}</span>
+                </button>
+              </div>
+              <p className="text-xs text-blue-600 text-center font-medium">
+                💬 {selectedLanguage === 'hi' 
+                  ? 'टेक्स्ट मोड: अपने सवाल टाइप करें और Enter दबाएं'
+                  : 'Text Mode: Type your questions and press Enter'}
+              </p>
+            </div>
+          ) : (
+            /* Voice Chat Mode */
+            <div className="space-y-3">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder={selectedLanguage === 'hi' 
+                    ? 'वॉयस रिकॉर्डिंग या टाइप करें...'
+                    : 'Voice recording or type here...'}
+                  className="flex-1 px-4 py-3 border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white disabled:bg-gray-100 transition-colors"
+                  disabled={isListening}
+                />
+                
+                {/* Voice Recording Button */}
+                <button
+                  onMouseDown={startListening}
+                  onMouseUp={stopListening}
+                  onTouchStart={startListening}
+                  onTouchEnd={stopListening}
+                  disabled={microphonePermission === 'denied'}
+                  className={`px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium ${
+                    isListening 
+                      ? 'bg-red-500 text-white animate-pulse shadow-lg scale-105' 
+                      : microphonePermission === 'denied'
+                      ? 'bg-gray-400 text-white'
+                      : 'bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg'
+                  }`}
+                  title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
+                >
+                  {isListening ? (
+                    <MicOff className="h-6 w-6" />
+                  ) : (
+                    <Mic className="h-6 w-6" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors font-medium flex items-center space-x-2"
+                >
+                  <Send className="h-5 w-5" />
+                  <span className="hidden sm:inline">{selectedLanguage === 'hi' ? 'भेजें' : 'Send'}</span>
+                </button>
+              </div>
+              
+              <div className="text-center space-y-1">
+                {microphonePermission === 'denied' ? (
+                  <p className="text-xs text-red-600 font-medium">
+                    🚫 {selectedLanguage === 'hi' 
+                      ? 'माइक्रोफोन एक्सेस की आवश्यकता है | ब्राउज़र सेटिंग्स जांचें'
+                      : 'Microphone access required | Check browser settings'}
+                  </p>
+                ) : (
+                  <p className="text-xs text-green-600 font-medium">
+                    🎤 {selectedLanguage === 'hi' 
+                      ? 'वॉयस मोड: माइक्रोफोन बटन दबाकर बात करें'
+                      : 'Voice Mode: Hold microphone button to speak'}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
