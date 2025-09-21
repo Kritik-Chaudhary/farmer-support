@@ -41,13 +41,57 @@ const stateCodeToName: Record<string, string> = {
   'WB': 'West Bengal'
 };
 
-// Top 25 most popular crops in India
+// Top 30 most common crops in India with official agmarknet IDs and names
 const topCrops = [
-  'Rice', 'Wheat', 'Maize', 'Sugarcane', 'Cotton', 'Soybean', 'Groundnut',
-  'Onion', 'Potato', 'Tomato', 'Chilli', 'Turmeric', 'Mustard', 'Sunflower',
-  'Sesame', 'Jowar', 'Bajra', 'Gram', 'Tur', 'Moong', 'Urad', 'Masoor',
-  'Banana', 'Mango', 'Coconut'
+  { id: '3', name: 'Rice' },
+  { id: '1', name: 'Wheat' },
+  { id: '4', name: 'Maize' },
+  { id: '23', name: 'Onion' },
+  { id: '24', name: 'Potato' },
+  { id: '78', name: 'Tomato' },
+  { id: '26', name: 'Chili Red' },
+  { id: '87', name: 'Green Chilli' },
+  { id: '39', name: 'Turmeric' },
+  { id: '12', name: 'Mustard' },
+  { id: '5', name: 'Jowar(Sorghum)' },
+  { id: '28', name: 'Bajra(Pearl Millet/Cumbu)' },
+  { id: '6', name: 'Bengal Gram(Gram)(Whole)' },
+  { id: '49', name: 'Arhar (Tur/Red Gram)(Whole)' },
+  { id: '9', name: 'Green Gram (Moong)(Whole)' },
+  { id: '8', name: 'Black Gram (Urd Beans)(Whole)' },
+  { id: '63', name: 'Lentil (Masur)(Whole)' },
+  { id: '19', name: 'Banana' },
+  { id: '20', name: 'Mango' },
+  { id: '138', name: 'Coconut' },
+  { id: '10', name: 'Groundnut' },
+  { id: '13', name: 'Soyabean' },
+  { id: '14', name: 'Sunflower' },
+  { id: '11', name: 'Sesamum(Sesame,Gingelly,Til)' },
+  { id: '15', name: 'Cotton' },
+  { id: '150', name: 'Sugarcane' },
+  { id: '25', name: 'Garlic' },
+  { id: '27', name: 'Ginger(Dry)' },
+  { id: '103', name: 'Ginger(Green)' },
+  { id: '22', name: 'Grapes' },
+  { id: '72', name: 'Papaya' },
+  { id: '34', name: 'Cauliflower' },
+  { id: '154', name: 'Cabbage' },
+  { id: '35', name: 'Brinjal' },
+  { id: '50', name: 'Green Peas' }
 ];
+
+// Helper function to find commodity by name or ID
+function getCommodityInfo(searchTerm: string) {
+  return topCrops.find(crop => 
+    crop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    crop.id === searchTerm
+  );
+}
+
+// Helper function to get all commodity names for reference
+function getAllCommodityNames() {
+  return topCrops.map(crop => crop.name);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -83,22 +127,22 @@ export async function GET(request: NextRequest) {
       // If state is selected, fetch top crops for that state
       console.log('Fetching top crops for state:', state);
       
-      const cropPromises = topCrops.slice(0, 25).map(async (crop) => {
+      const cropPromises = topCrops.slice(0, 30).map(async (crop) => {
         try {
           const params = {
             'api-key': process.env.DATA_GOV_API_KEY || '',
             'format': 'json',
-            'limit': 10, // Get top 10 records per crop
+            'limit': 5, // Get top 5 records per crop to manage response size
             'offset': 0,
             'filters[state]': state,
-            'filters[commodity]': crop,
+            'filters[commodity]': crop.name, // Use crop name for API call
             ...(district && { 'filters[district]': district })
           };
           
           const response = await axios.get(apiUrl, { params });
           return response.data.records || [];
         } catch (error) {
-          console.log(`No data found for crop: ${crop} in state: ${state}`);
+          console.log(`No data found for crop: ${crop.name} (ID: ${crop.id}) in state: ${state}`);
           return [];
         }
       });
@@ -138,14 +182,27 @@ export async function GET(request: NextRequest) {
     });
     
     console.log(`Returning ${sortedData.length} unique records`);
+    
+    // Get unique commodities in the result for metadata
+    const uniqueCommodities = [...new Set(sortedData.map(item => item.commodity))];
+    const searchedCommodity = commodity ? getCommodityInfo(commodity) : null;
 
     return NextResponse.json({
       success: true,
       data: sortedData,
       total: sortedData.length,
       timestamp: new Date().toISOString(),
-      source: 'data.gov.in',
-      note: state ? `Prices for top crops in ${state}` : 'Sample mandi prices from multiple states'
+      source: 'data.gov.in API (agmarknet)',
+      metadata: {
+        state_searched: state || 'All states',
+        district_searched: district || 'All districts',
+        commodity_searched: commodity || 'Top crops auto-selected',
+        commodity_info: searchedCommodity,
+        unique_commodities_found: uniqueCommodities,
+        total_commodities_searched: state && !commodity ? topCrops.length : (commodity ? 1 : 'multiple'),
+        available_commodities: getAllCommodityNames()
+      },
+      note: state ? `Mandi prices for ${commodity || 'top crops'} in ${state}` : 'Sample mandi prices from multiple states'
     });
 
   } catch (error) {
