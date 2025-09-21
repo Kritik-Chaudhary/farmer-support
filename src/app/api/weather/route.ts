@@ -29,6 +29,13 @@ interface IpGeolocationIoResponse {
   country_name: string;
 }
 
+interface IpInfoIoResponse {
+  loc: string;
+  city: string;
+  region: string;
+  country: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -83,7 +90,7 @@ export async function GET(request: NextRequest) {
           parser: (data: IpApiComResponse) => ({
             lat: data.lat?.toString(),
             lon: data.lon?.toString(),
-            city: data.city,
+            city: data.city || data.regionName,  // Try region name if city is not available
             country: data.country,
             valid: data.status === 'success' && data.lat && data.lon
           })
@@ -107,6 +114,16 @@ export async function GET(request: NextRequest) {
             country: data.country_name,
             valid: data.latitude && data.longitude
           })
+        },
+        {
+          url: 'https://ipinfo.io/json',
+          parser: (data: IpInfoIoResponse) => ({
+            lat: data.loc?.split(',')[0],
+            lon: data.loc?.split(',')[1],
+            city: data.city || data.region,
+            country: data.country,
+            valid: data.loc && data.loc.includes(',')
+          })
         }
       ];
       
@@ -119,7 +136,8 @@ export async function GET(request: NextRequest) {
           if (locationData.valid) {
             lat = locationData.lat;
             lon = locationData.lon;
-            locationName = locationData.city || city || 'Unknown';
+            // Use the detected city name, fallback to coordinate-based name if needed
+            locationName = locationData.city || 'Detected Location';
             locationDetected = true;
             console.log(`Location detected: ${locationName} (${lat}, ${lon})`);
             break;
@@ -213,31 +231,56 @@ export async function GET(request: NextRequest) {
     const currentWeather = weatherData.current || {};
     const currentWeatherCode = getWeatherDescription(currentWeather.weather_code || 0);
     
-    // Try to reverse geocode to get city name (only if we don't already have a good location name)
+    // Always try to reverse geocode to get the most accurate city name
     console.log(`Location name before reverse geocoding: ${locationName}`);
-    if (locationName === 'Unknown' || locationName === 'Delhi') {
-      try {
-        console.log(`Attempting reverse geocoding for coordinates: ${lat}, ${lon}`);
-        const geocodeResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, { timeout: 5000 });
-        console.log('Reverse geocode response:', JSON.stringify(geocodeResponse.data.address, null, 2));
-        const detectedLocationName = geocodeResponse.data.address?.city || 
-                                    geocodeResponse.data.address?.town || 
-                                    geocodeResponse.data.address?.village || 
-                                    geocodeResponse.data.address?.state_district ||
-                                    geocodeResponse.data.address?.county;
-        if (detectedLocationName) {
+    try {
+      console.log(`Attempting reverse geocoding for coordinates: ${lat}, ${lon}`);
+      const geocodeResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, { timeout: 8000 });
+      console.log('Reverse geocode response:', JSON.stringify(geocodeResponse.data.address, null, 2));
+      
+      const detectedLocationName = geocodeResponse.data.address?.city || 
+                                  geocodeResponse.data.address?.town || 
+                                  geocodeResponse.data.address?.village || 
+                                  geocodeResponse.data.address?.state_district ||
+                                  geocodeResponse.data.address?.county ||
+                                  geocodeResponse.data.address?.state;
+      
+      if (detectedLocationName) {
+        // Only update if we get a better name or if current name is generic
+        if (locationName === 'Unknown' || locationName === 'Delhi' || locationName === 'Detected Location' || detectedLocationName.length > locationName.length) {
           locationName = detectedLocationName;
-          console.log(`Reverse geocoded location: ${locationName}`);
+          console.log(`Updated location name from reverse geocoding: ${locationName}`);
         } else {
-          console.log('No suitable location name found in reverse geocoding response');
+          console.log(`Keeping IP-detected location name: ${locationName}`);
         }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.log('Reverse geocoding failed:', errorMessage);
-        // Keep existing location name
+      } else {
+        console.log('No suitable location name found in reverse geocoding response');
+        // If we have no good name, set a default based on coordinates
+        if (locationName === 'Unknown' && lat && lon) {
+          // Rough coordinate-based location for India
+          const latNum = parseFloat(lat);
+          const lonNum = parseFloat(lon);
+          if (latNum >= 28 && latNum <= 32 && lonNum >= 76 && lonNum <= 80) {
+            locationName = 'Northern India';
+          } else if (latNum >= 20 && latNum <= 28 && lonNum >= 72 && lonNum <= 88) {
+            locationName = 'Central India';
+          } else if (latNum >= 8 && latNum <= 20 && lonNum >= 72 && lonNum <= 88) {
+            locationName = 'Southern India';
+          } else {
+            locationName = 'India';
+          }
+          console.log(`Set coordinate-based location: ${locationName}`);
+        }
       }
-    } else {
-      console.log(`Using IP-detected location name: ${locationName}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log('Reverse geocoding failed:', errorMessage);
+      
+      // If reverse geocoding fails and we still have Unknown, set a better default
+      if (locationName === 'Unknown') {
+        locationName = 'Your Location';
+        console.log('Set fallback location name: Your Location');
+      }
     }
 
     // Generate weather alerts based on conditions
