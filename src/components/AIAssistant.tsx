@@ -40,6 +40,7 @@ export default function AIAssistant() {
   const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
   const [recognitionActive, setRecognitionActive] = useState(false);
   const startingRecognitionRef = useRef(false);
+  const [autoRestartAfterResponse, setAutoRestartAfterResponse] = useState(false);
   
   // Use the global language from i18n
   const selectedLanguage = i18n.language;
@@ -298,9 +299,19 @@ export default function AIAssistant() {
       }
       setIsListening(false);
       setRecognitionActive(false);
-      if (inputMessage.trim()) {
+      // Auto-send in voice mode when voice stops
+      if (inputMessage.trim() && chatMode === 'voice') {
         sendMessage(true);
       }
+    }
+  };
+
+  // Toggle voice listening (click to start/stop)
+  const toggleVoiceListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -317,7 +328,18 @@ export default function AIAssistant() {
     utterance.pitch = 1;
 
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Auto-restart listening after AI finishes speaking in voice mode
+      if (chatMode === 'voice' && autoRestartAfterResponse) {
+        setAutoRestartAfterResponse(false);
+        setTimeout(() => {
+          if (chatMode === 'voice' && !isListening) {
+            startListening();
+          }
+        }, 500); // Small delay before restarting
+      }
+    };
     utterance.onerror = (event) => {
       console.log('Speech error (likely cancelled):', event.error);
       setIsSpeaking(false);
@@ -420,6 +442,10 @@ export default function AIAssistant() {
       // Speak the response if in voice mode or if it was a voice message
       if (chatMode === 'voice' || isVoice) {
         speakText(assistantMessage.text);
+        // Auto-restart listening after response in voice mode
+        if (chatMode === 'voice') {
+          setAutoRestartAfterResponse(true);
+        }
       }
     } catch (error) {
       // Connection error messages in different languages
@@ -639,53 +665,178 @@ export default function AIAssistant() {
           </div>
         )}
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex items-start max-w-xs lg:max-w-md ${
-                message.sender === 'user' ? 'flex-row-reverse' : ''
-              }`}>
-                <div className={`p-2 rounded-full ${
-                  message.sender === 'user' ? 'bg-blue-500 ml-2' : 'bg-green-500 mr-2'
+        {/* Messages - Hide in voice mode */}
+        {chatMode === 'text' && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`flex items-start max-w-xs lg:max-w-md ${
+                  message.sender === 'user' ? 'flex-row-reverse' : ''
                 }`}>
-                  {message.sender === 'user' ? (
-                    <User className="h-5 w-5 text-white" />
-                  ) : (
-                    <Bot className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  <div className={`px-4 py-2 rounded-lg ${
-                    message.sender === 'user' 
-                      ? 'bg-blue-500 text-white font-medium' 
-                      : 'bg-gray-100 text-gray-800 font-medium border border-gray-200'
+                  <div className={`p-2 rounded-full ${
+                    message.sender === 'user' ? 'bg-blue-500 ml-2' : 'bg-green-500 mr-2'
                   }`}>
-                    <p className="text-sm">{message.text}</p>
+                    {message.sender === 'user' ? (
+                      <User className="h-5 w-5 text-white" />
+                    ) : (
+                      <Bot className="h-5 w-5 text-white" />
+                    )}
                   </div>
-                  <p className={`text-xs mt-1 ${
-                    message.sender === 'user' ? 'text-right' : 'text-left'
-                  } text-gray-600 font-medium`}>
-                    {message.timestamp.toLocaleTimeString()}
-                    {message.isVoice && ' 🎤'}
-                  </p>
+                  <div>
+                    <div className={`px-4 py-2 rounded-lg ${
+                      message.sender === 'user' 
+                        ? 'bg-blue-500 text-white font-medium' 
+                        : 'bg-gray-100 text-gray-800 font-medium border border-gray-200'
+                    }`}>
+                      <p className="text-sm">{message.text}</p>
+                    </div>
+                    <p className={`text-xs mt-1 ${
+                      message.sender === 'user' ? 'text-right' : 'text-left'
+                    } text-gray-600 font-medium`}>
+                      {message.timestamp.toLocaleTimeString()}
+                      {message.isVoice && ' 🎤'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="flex items-center bg-gray-100 border border-gray-200 rounded-lg px-4 py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                <span className="text-sm font-medium text-gray-700">{t('assistant.thinking')}</span>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="flex items-center bg-gray-100 border border-gray-200 rounded-lg px-4 py-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                  <span className="text-sm font-medium text-gray-700">{t('assistant.thinking')}</span>
+                </div>
               </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+        
+        {/* Voice Mode - Full Screen Voice Interface */}
+        {chatMode === 'voice' && (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center space-y-8 max-w-md">
+              {/* AI Status - Show when AI is thinking or speaking */}
+              {(isLoading || isSpeaking) && (
+                <div className="mb-8">
+                  <div className="flex items-center justify-center space-x-3 bg-green-50 border border-green-200 rounded-lg p-4">
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                        <span className="text-green-700 font-medium">
+                          {selectedLanguage === 'hi' ? '🤔 सोच रहे हैं...' : '🤔 Thinking...'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="h-5 w-5 text-green-600 animate-pulse" />
+                        <span className="text-green-700 font-medium">
+                          {selectedLanguage === 'hi' ? '🗣️ जवाब दे रहे हैं...' : '🗣️ Speaking...'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Large Voice Button */}
+              <button
+                onClick={toggleVoiceListening}
+                disabled={microphonePermission === 'denied' || isLoading}
+                className={`relative p-12 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isListening 
+                    ? 'bg-red-500 text-white shadow-2xl scale-110' 
+                    : microphonePermission === 'denied'
+                    ? 'bg-gray-400 text-white'
+                    : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105'
+                }`}
+                title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
+              >
+                {isListening ? (
+                  <>
+                    <MicOff className="h-16 w-16" />
+                    {/* Animated rings for listening state */}
+                    <div className="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div>
+                    <div className="absolute inset-2 rounded-full border-2 border-red-200 animate-pulse"></div>
+                  </>
+                ) : (
+                  <Mic className="h-16 w-16" />
+                )}
+              </button>
+              
+              {/* Voice Status Text */}
+              <div className="space-y-2">
+                {isListening ? (
+                  <div className="space-y-2">
+                    <p className="text-xl font-bold text-red-600 animate-pulse">
+                      🔴 {selectedLanguage === 'hi' ? 'सुन रहे हैं...' : 'Listening...'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedLanguage === 'hi' 
+                        ? 'बोलना समाप्त करने के लिए फिर से क्लिक करें'
+                        : 'Click again to stop speaking'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xl font-semibold text-green-600">
+                      🎤 {selectedLanguage === 'hi' 
+                        ? 'बोलने के लिए क्लिक करें'
+                        : 'Click to speak'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedLanguage === 'hi' 
+                        ? 'बोलने के बाद AI आपको जवाब सुनाएगा और फिर से सुनना शुरू करेगा'
+                        : 'AI will respond and automatically listen for your next question'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Voice Instructions */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="text-sm text-green-800 space-y-2">
+                  <p className="font-semibold">
+                    {selectedLanguage === 'hi' ? '💡 कैसे उपयोग करें:' : '💡 How to use:'}
+                  </p>
+                  <ul className="space-y-1 text-xs text-left">
+                    <li>{selectedLanguage === 'hi' 
+                      ? '• माइक्रोफोन पर क्लिक करें और बोलें'
+                      : '• Click the microphone and start speaking'}</li>
+                    <li>{selectedLanguage === 'hi' 
+                      ? '• बोलना समाप्त होने पर फिर से क्लिक करें'
+                      : '• Click again when finished speaking'}</li>
+                    <li>{selectedLanguage === 'hi' 
+                      ? '• AI जवाब देगा और अगले सवाल के लिए सुनेगा'
+                      : '• AI will respond and listen for your next question'}</li>
+                  </ul>
+                </div>
+              </div>
+              
+              {/* Error Message */}
+              {microphonePermission === 'denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <MicOff className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-700 text-left">
+                      <p className="font-semibold mb-1">
+                        {selectedLanguage === 'hi' ? 'माइक्रोफोन एक्सेस आवश्यक' : 'Microphone Access Required'}
+                      </p>
+                      <p className="text-xs">
+                        {selectedLanguage === 'hi' 
+                          ? 'वॉयस चैट के लिए कृपया ब्राउज़र में माइक्रोफोन की अनुमति दें।'
+                          : 'Please allow microphone access in your browser for voice chat.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+          </div>
+        )}
 
         {/* Suggested Questions */}
         <div className="px-4 py-2 border-t bg-gray-50">
@@ -735,100 +886,8 @@ export default function AIAssistant() {
                   : 'Text Mode: Type your questions and press Enter'}
               </p>
             </div>
-          ) : (
-            /* Voice Chat Mode - Pure Voice Only */
-            <div className="space-y-4">
-              {/* Voice Recording Interface */}
-              <div className="flex flex-col items-center space-y-4">
-                {/* Large Voice Recording Button */}
-                <button
-                  onMouseDown={startListening}
-                  onMouseUp={stopListening}
-                  onTouchStart={startListening}
-                  onTouchEnd={stopListening}
-                  disabled={microphonePermission === 'denied'}
-                  className={`relative p-8 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isListening 
-                      ? 'bg-red-500 text-white animate-pulse shadow-2xl scale-110' 
-                      : microphonePermission === 'denied'
-                      ? 'bg-gray-400 text-white'
-                      : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105'
-                  }`}
-                  title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="h-12 w-12" />
-                      {/* Animated rings for listening state */}
-                      <div className="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div>
-                      <div className="absolute inset-2 rounded-full border-2 border-red-200 animate-pulse"></div>
-                    </>
-                  ) : (
-                    <Mic className="h-12 w-12" />
-                  )}
-                </button>
-                
-                {/* Voice Status Text */}
-                <div className="text-center">
-                  {isListening ? (
-                    <p className="text-lg font-semibold text-red-600 animate-pulse">
-                      🔴 {selectedLanguage === 'hi' ? 'सुन रहे हैं...' : 'Listening...'}
-                    </p>
-                  ) : (
-                    <p className="text-lg font-medium text-green-600">
-                      🎤 {selectedLanguage === 'hi' 
-                        ? 'बोलने के लिए माइक्रोफोन दबाएं'
-                        : 'Press microphone to speak'}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              {/* Voice Mode Instructions */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  </div>
-                  <div className="text-sm text-green-800">
-                    <p className="font-semibold mb-1">
-                      {selectedLanguage === 'hi' ? 'वॉयस चैट का उपयोग कैसे करें:' : 'How to use Voice Chat:'}
-                    </p>
-                    <ul className="space-y-1 text-xs">
-                      <li>{selectedLanguage === 'hi' 
-                        ? '• माइक्रोफोन बटन को दबाकर रखें और बोलें'
-                        : '• Hold the microphone button and speak'}</li>
-                      <li>{selectedLanguage === 'hi' 
-                        ? '• बोलना समाप्त होने पर बटन छोड़ दें'
-                        : '• Release the button when finished speaking'}</li>
-                      <li>{selectedLanguage === 'hi' 
-                        ? '• AI असिस्टेंट आपको जवाब सुनाएगा'
-                        : '• AI Assistant will speak the response back to you'}</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Error Message for Voice Mode */}
-              {microphonePermission === 'denied' && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <MicOff className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-red-700">
-                      <p className="font-semibold mb-1">
-                        {selectedLanguage === 'hi' ? 'माइक्रोफोन एक्सेस आवश्यक' : 'Microphone Access Required'}
-                      </p>
-                      <p className="text-xs">
-                        {selectedLanguage === 'hi' 
-                          ? 'वॉयस चैट के लिए कृपया ब्राउज़र में माइक्रोफोन की अनुमति दें।'
-                          : 'Please allow microphone access in your browser for voice chat.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          ) : null
+          }
         </div>
       </div>
     </div>
