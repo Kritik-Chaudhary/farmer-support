@@ -107,7 +107,18 @@ async function scrapeAgmarknetData(stateCode?: string, commodityId?: string, dat
 
     // Simple HTML parsing to extract price data
     const html = response.data;
-    const rows: any[] = [];
+    const rows: Array<{
+      state: string;
+      district: string;
+      market: string;
+      commodity: string;
+      variety: string;
+      arrival_date: string;
+      min_price: string;
+      max_price: string;
+      modal_price: string;
+      grade: string;
+    }> = [];
     
     // Look for table data - this is a simplified parser
     // In a production environment, you'd use a proper HTML parser like Cheerio
@@ -138,7 +149,7 @@ async function scrapeAgmarknetData(stateCode?: string, commodityId?: string, dat
                 rowData.modal_price !== '' && rowData.modal_price !== '--') {
               rows.push(rowData);
             }
-          } catch (error) {
+          } catch {
             // Skip malformed rows
             console.log('Skipping malformed row');
           }
@@ -195,7 +206,18 @@ export async function GET(request: NextRequest) {
   });
   
   try {
-    let allData: any[] = [];
+    let allData: Array<{
+      state: string;
+      district: string;
+      market: string;
+      commodity: string;
+      variety: string;
+      arrival_date: string;
+      min_price: string;
+      max_price: string;
+      modal_price: string;
+      grade: string;
+    }> = [];
     
     if (commodity) {
       // Fetch specific commodity with date fallback

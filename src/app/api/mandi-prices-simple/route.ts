@@ -95,7 +95,7 @@ const stateCrops: Record<string, string[]> = {
 };
 
 // Generate realistic price with market variations
-function generatePrice(crop: any, state: string): { min: number, max: number, modal: number } {
+function generatePrice(crop: { basePrice: number; volatility: number }, state: string): { min: number, max: number, modal: number } {
   const { basePrice, volatility } = crop;
   
   // State-based price variations (some states have higher/lower prices)
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
   });
   
   try {
-    let cropsToFetch: any[] = [];
+    let cropsToFetch: Array<{ name: string; basePrice: number; volatility: number; priority: number }> = [];
     let selectedStates: string[] = [];
     
     if (commodityFilter) {
@@ -174,7 +174,18 @@ export async function GET(request: NextRequest) {
       selectedStates = ['MH', 'PB', 'HR', 'UP', 'GJ', 'KK', 'TN', 'AP'];
     }
     
-    const allData: any[] = [];
+    const allData: Array<{
+      state: string;
+      district: string;
+      market: string;
+      commodity: string;
+      variety: string;
+      arrival_date: string;
+      min_price: string;
+      max_price: string;
+      modal_price: string;
+      grade: string;
+    }> = [];
     
     selectedStates.forEach(state => {
       const districts = getDistricts(state).slice(0, 3);

@@ -94,7 +94,8 @@ function getAllCommodityNames() {
 }
 
 // Function to try different date ranges
-async function fetchWithDateFallback(apiUrl: string, baseParams: any) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchWithDateFallback(apiUrl: string, baseParams: Record<string, any>) {
   const dates = [];
   for (let i = 0; i < 7; i++) {
     const date = new Date();
