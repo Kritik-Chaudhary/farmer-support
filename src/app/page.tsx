@@ -33,7 +33,7 @@ export default function Home() {
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main className="container mx-auto px-4 py-8 pb-20 md:pb-8">
-          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
           {activeTab === 'assistant' && <AIAssistant />}
           {activeTab === 'mandi' && <MandiPrices />}
           {activeTab === 'weather' && <WeatherAlerts />}

@@ -11,42 +11,51 @@ import {
   Droplets
 } from 'lucide-react';
 
-export default function Dashboard() {
+interface DashboardProps {
+  setActiveTab: (tab: string) => void;
+}
+
+export default function Dashboard({ setActiveTab }: DashboardProps) {
   const features = [
     {
       title: 'AI Farming Assistant',
       description: 'Get instant answers about crops, weather, and farming practices',
       icon: MessageCircle,
       color: 'bg-blue-500',
-      stats: 'Available 24/7'
+      stats: 'Available 24/7',
+      tabKey: 'assistant'
     },
     {
       title: 'Mandi Prices',
       description: 'Real-time market prices for your crops across different mandis',
       icon: TrendingUp,
       color: 'bg-green-500',
-      stats: '500+ Markets'
+      stats: '500+ Markets',
+      tabKey: 'mandi'
     },
     {
       title: 'Weather Alerts',
       description: 'Get weather forecasts and alerts for your farming area',
       icon: Cloud,
       color: 'bg-yellow-500',
-      stats: '5-day forecast'
+      stats: '5-day forecast',
+      tabKey: 'weather'
     },
     {
       title: 'Crop Health Check',
       description: 'AI-powered crop disease detection and treatment recommendations',
       icon: Camera,
       color: 'bg-red-500',
-      stats: '95% Accuracy'
+      stats: '95% Accuracy',
+      tabKey: 'crop-detection'
     },
     {
       title: 'Government Schemes',
       description: 'Browse and apply for farmer welfare schemes and subsidies',
       icon: FileText,
       color: 'bg-purple-500',
-      stats: '50+ Schemes'
+      stats: '50+ Schemes',
+      tabKey: 'schemes'
     }
   ];
 
@@ -90,21 +99,30 @@ export default function Dashboard() {
         {features.map((feature, index) => {
           const Icon = feature.icon;
           return (
-            <div key={index} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100">
+            <div 
+              key={index} 
+              onClick={() => setActiveTab(feature.tabKey)}
+              className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100 cursor-pointer hover:scale-105 hover:border-gray-300 group"
+            >
               <div className="flex items-start space-x-4">
-                <div className={`${feature.color} p-3 rounded-lg`}>
+                <div className={`${feature.color} p-3 rounded-lg group-hover:scale-110 transition-transform duration-200`}>
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-gray-700 text-sm font-medium mb-3">
                     {feature.description}
                   </p>
-                  <span className="inline-block bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded-full border border-gray-200">
-                    {feature.stats}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-block bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded-full border border-gray-200">
+                      {feature.stats}
+                    </span>
+                    <span className="text-xs text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                      Click to open →
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
