@@ -98,21 +98,25 @@ export default function AIAssistant() {
 
   useEffect(() => {
     // Initialize Speech Recognition
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false; // Only get final results
+      recognitionRef.current.interimResults = true; // Need interim results for mobile
       recognitionRef.current.maxAlternatives = 1;
       
       const currentLang = languages.find(l => l.code === selectedLanguage);
       recognitionRef.current.lang = currentLang?.voice || 'en-US';
 
-      // Simple result handler
+      // Result handler with mobile support
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        
         console.log('Voice transcript:', transcript);
         
         if (transcript && transcript.trim()) {
@@ -179,7 +183,7 @@ export default function AIAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Simple start listening function
+  // Simple start listening function with mobile support
   const startListening = async () => {
     if (!recognitionRef.current || isListening) return;
     
@@ -193,30 +197,57 @@ export default function AIAssistant() {
     try {
       // Request microphone permission if needed
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophonePermission('granted');
+        
+        // Important: Stop the stream after getting permission on mobile
+        // This prevents the microphone from staying on
+        stream.getTracks().forEach(track => track.stop());
       }
       
       setIsListening(true);
-      recognitionRef.current.start();
       
-      // Set a timeout to automatically stop after 10 seconds
+      // Add small delay for mobile
+      setTimeout(() => {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.error('Recognition start error:', e);
+          setIsListening(false);
+        }
+      }, 100);
+      
+      // Set a timeout to automatically stop
       voiceTimeoutRef.current = setTimeout(() => {
         console.log('Voice timeout - stopping recognition');
         if (recognitionRef.current && isListening) {
-          recognitionRef.current.stop();
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {
+            console.log('Stop error in timeout:', e);
+          }
         }
       }, 10000); // 10 second max recording time
       
     } catch (error) {
       console.error('Failed to start recognition:', error);
       setIsListening(false);
-      setMicrophonePermission('denied');
-      setMicrophoneError(
-        selectedLanguage === 'hi'
-          ? 'माइक्रोफोन की अनुमति दें'
-          : 'Please allow microphone access'
-      );
+      
+      // Check if it's a permission error
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        setMicrophonePermission('denied');
+        setMicrophoneError(
+          selectedLanguage === 'hi'
+            ? 'माइक्रोफोन की अनुमति दें'
+            : 'Please allow microphone access'
+        );
+      } else {
+        setMicrophoneError(
+          selectedLanguage === 'hi'
+            ? 'वॉयस समर्थन उपलब्ध नहीं'
+            : 'Voice not supported on this device'
+        );
+      }
     }
   };
 
@@ -252,12 +283,15 @@ export default function AIAssistant() {
     utterance.lang = currentLang?.voice || 'en-US';
     utterance.rate = 0.9;
     utterance.pitch = 1;
+    utterance.volume = 1.0; // Ensure volume is set for mobile
 
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      // Auto-restart listening after AI finishes speaking in voice mode
-      if (chatMode === 'voice') {
+      // Don't auto-restart on mobile - user must click
+      // Mobile browsers require user interaction for each recognition start
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (chatMode === 'voice' && !isMobile) {
         setTimeout(() => {
           if (!isListening) {
             console.log('Auto-restarting voice recognition after speech');
@@ -724,12 +758,23 @@ export default function AIAssistant() {
               
               {/* Large Voice Button with different states */}
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   if (isSpeaking) {
                     // Stop AI speaking when clicked
                     stopSpeaking();
                   } else if (!isLoading) {
                     // Normal voice toggle when not speaking or loading
+                    toggleVoiceListening();
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  // Handle touch for mobile
+                  if (isSpeaking) {
+                    stopSpeaking();
+                  } else if (!isLoading && !isListening) {
+                    // Only start on touch, not stop (to prevent accidental stops)
                     toggleVoiceListening();
                   }
                 }}
@@ -838,14 +883,14 @@ export default function AIAssistant() {
                   </p>
                   <ul className="space-y-1 text-xs text-left">
                     <li>{selectedLanguage === 'hi' 
-                      ? '• माइक्रोफोन पर क्लिक करें और बोलें'
-                      : '• Click the microphone and start speaking'}</li>
+                      ? '• माइक्रोफोन पर टैप करें और बोलें'
+                      : '• Tap the microphone and start speaking'}</li>
                     <li>{selectedLanguage === 'hi' 
-                      ? '• बोलना समाप्त होने पर फिर से क्लिक करें'
-                      : '• Click again when finished speaking'}</li>
+                      ? '• बोलना समाप्त होने पर फिर से टैप करें'
+                      : '• Tap again when finished speaking'}</li>
                     <li>{selectedLanguage === 'hi' 
-                      ? '• AI जवाब देगा और अगले सवाल के लिए सुनेगा'
-                      : '• AI will respond and listen for your next question'}</li>
+                      ? '• AI जवाब देगा और फिर से टैप करें'
+                      : '• AI will respond, then tap again for next question'}</li>
                   </ul>
                 </div>
               </div>
