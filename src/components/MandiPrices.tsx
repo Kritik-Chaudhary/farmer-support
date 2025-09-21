@@ -19,7 +19,7 @@ export default function MandiPrices() {
   const [prices, setPrices] = useState<MandiPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedState, setSelectedState] = useState('');
+  const [selectedState, setSelectedState] = useState('UC'); // Default to Uttarakhand
   const [selectedCommodity, setSelectedCommodity] = useState('');
 
   const fetchPrices = useCallback(async () => {
