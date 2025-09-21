@@ -32,10 +32,10 @@ interface IpGeolocationIoResponse {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const city = searchParams.get('city') || 'Delhi';
+    const city = searchParams.get('city');
     let lat = searchParams.get('lat');
     let lon = searchParams.get('lon');
-    let locationName = city; // Initialize location name
+    let locationName = 'Unknown'; // Initialize location name
 
     // If no coordinates provided, get them from IP or use default cities
     if (!lat || !lon) {
@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
         'Nagpur': { lat: 21.1458, lon: 79.0882 },
         'Surat': { lat: 21.1702, lon: 72.8311 },
         'Varanasi': { lat: 25.3176, lon: 82.9739 },
-        'Agra': { lat: 27.1767, lon: 78.0081 }
+        'Agra': { lat: 27.1767, lon: 78.0081 },
+        'Dehradun': { lat: 30.3275, lon: 78.0325 }
       };
 
       // Enhanced IP-based location detection
@@ -131,11 +132,20 @@ export async function GET(request: NextRequest) {
       
       if (!locationDetected) {
         console.log('IP location detection failed, using fallback coordinates');
-        // Use city coordinates or default to Delhi
-        const coords = cityCoordinates[city] || cityCoordinates['Delhi'];
-        lat = coords.lat.toString();
-        lon = coords.lon.toString();
-        locationName = city;
+        // Use city coordinates if provided, otherwise default to Delhi
+        if (city && cityCoordinates[city]) {
+          const coords = cityCoordinates[city];
+          lat = coords.lat.toString();
+          lon = coords.lon.toString();
+          locationName = city;
+        } else {
+          // Last resort - use Delhi coordinates
+          const coords = cityCoordinates['Delhi'];
+          lat = coords.lat.toString();
+          lon = coords.lon.toString();
+          locationName = 'Delhi';
+        }
+        console.log(`Using fallback location: ${locationName} (${lat}, ${lon})`);
       }
     }
 
@@ -203,16 +213,30 @@ export async function GET(request: NextRequest) {
     const currentWeather = weatherData.current || {};
     const currentWeatherCode = getWeatherDescription(currentWeather.weather_code || 0);
     
-    // Try to reverse geocode to get city name
-    try {
-      const geocodeResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-      locationName = geocodeResponse.data.address?.city || 
-                     geocodeResponse.data.address?.town || 
-                     geocodeResponse.data.address?.village || 
-                     geocodeResponse.data.address?.state_district ||
-                     city;
-    } catch {
-      // Keep default city name
+    // Try to reverse geocode to get city name (only if we don't already have a good location name)
+    console.log(`Location name before reverse geocoding: ${locationName}`);
+    if (locationName === 'Unknown' || locationName === 'Delhi') {
+      try {
+        console.log(`Attempting reverse geocoding for coordinates: ${lat}, ${lon}`);
+        const geocodeResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, { timeout: 5000 });
+        console.log('Reverse geocode response:', JSON.stringify(geocodeResponse.data.address, null, 2));
+        const detectedLocationName = geocodeResponse.data.address?.city || 
+                                    geocodeResponse.data.address?.town || 
+                                    geocodeResponse.data.address?.village || 
+                                    geocodeResponse.data.address?.state_district ||
+                                    geocodeResponse.data.address?.county;
+        if (detectedLocationName) {
+          locationName = detectedLocationName;
+          console.log(`Reverse geocoded location: ${locationName}`);
+        } else {
+          console.log('No suitable location name found in reverse geocoding response');
+        }
+      } catch (error: any) {
+        console.log('Reverse geocoding failed:', error.message);
+        // Keep existing location name
+      }
+    } else {
+      console.log(`Using IP-detected location name: ${locationName}`);
     }
 
     // Generate weather alerts based on conditions
@@ -275,6 +299,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log(`Final location name being returned: ${locationName}`);
+    
     return NextResponse.json({
       success: true,
       current: {

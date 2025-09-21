@@ -49,18 +49,21 @@ export default function WeatherAlerts() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('GPS location obtained:', position.coords.latitude, position.coords.longitude);
           setUserLocation({
             lat: position.coords.latitude,
             lon: position.coords.longitude
           });
         },
         (error) => {
-          console.log('Geolocation error, falling back to IP detection');
+          console.log('Geolocation error:', error.message, 'falling back to IP detection');
           // If browser location fails, API will use IP detection
           fetchWeather();
-        }
+        },
+        { timeout: 10000, enableHighAccuracy: false }
       );
     } else {
+      console.log('Geolocation not supported, using IP detection');
       // If geolocation not supported, API will use IP detection
       fetchWeather();
     }
