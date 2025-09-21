@@ -193,10 +193,12 @@ Note: User is asking about prices. Provide specific price estimates and market t
     const cleanText = text
       .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting (**text**)
       .replace(/\*(.*?)\*/g, '$1')     // Remove italic formatting (*text*)
+      .replace(/\*/g, '')             // Remove any remaining single asterisks
       .replace(/#{1,6}\s/g, '')       // Remove heading markers
       .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links, keep text
       .replace(/`([^`]+)`/g, '$1')    // Remove code formatting
       .replace(/\n{3,}/g, '\n\n')     // Reduce excessive line breaks
+      .replace(/\s+/g, ' ')           // Replace multiple spaces with single space
       .trim();
 
     return NextResponse.json({ 
