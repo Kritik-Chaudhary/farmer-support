@@ -127,7 +127,7 @@ export default function AIAssistant() {
 
       // Simple end handler - this is where we send the message
       recognitionRef.current.onend = () => {
-        console.log('Recognition ended, isListening:', isListening);
+        console.log('Recognition ended');
         setIsListening(false);
         
         // Clear any timeout
@@ -143,7 +143,7 @@ export default function AIAssistant() {
           // Clear the input
           setInputMessage('');
           inputMessageRef.current = '';
-          // Send the message
+          // Send the message (this will set isLoading to true)
           sendVoiceMessage(message);
         }
       };
@@ -285,15 +285,21 @@ export default function AIAssistant() {
     utterance.pitch = 1;
     utterance.volume = 1.0; // Ensure volume is set for mobile
 
-    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onstart = () => {
+      console.log('Speech started');
+      setIsSpeaking(true);
+    };
+    
     utterance.onend = () => {
+      console.log('Speech ended');
       setIsSpeaking(false);
+      
       // Don't auto-restart on mobile - user must click
       // Mobile browsers require user interaction for each recognition start
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (chatMode === 'voice' && !isMobile) {
         setTimeout(() => {
-          if (!isListening) {
+          if (!isListening && !isLoading) {
             console.log('Auto-restarting voice recognition after speech');
             startListening();
           }
@@ -383,14 +389,21 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, assistantMessage]);
       
+      // Immediately set loading to false and start speaking
+      // This ensures we go directly from thinking to speaking
+      setIsLoading(false);
+      
       // Speak the response for voice messages
       if (chatMode === 'voice') {
+        // Small delay to ensure state updates
         setTimeout(() => {
           speakText(assistantMessage.text);
-        }, 200);
+        }, 100);
       }
     } catch (error) {
       console.error('Error sending voice message:', error);
+      setIsLoading(false);
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: selectedLanguage === 'hi' 
@@ -400,8 +413,13 @@ export default function AIAssistant() {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      
+      // Also speak the error message
+      if (chatMode === 'voice') {
+        setTimeout(() => {
+          speakText(errorMessage.text);
+        }, 100);
+      }
     }
   };
 
