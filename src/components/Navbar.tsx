@@ -33,13 +33,13 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
     <nav className="bg-white shadow-lg border-b-4 border-green-600 sticky top-0 z-40">
       <div className="container mx-auto px-2 md:px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
-          <div className="flex items-center space-x-2 flex-shrink-0 min-w-0">
-            <Leaf className="h-6 w-6 md:h-8 md:w-8 text-green-600 flex-shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-sm md:text-xl font-bold text-gray-900 truncate">
+          <div className="flex items-center space-x-1 md:space-x-2 flex-shrink min-w-0 overflow-hidden">
+            <Leaf className="h-5 w-5 md:h-8 md:w-8 text-green-600 flex-shrink-0" />
+            <div className="min-w-0 overflow-hidden">
+              <h1 className="text-xs sm:text-sm md:text-xl font-bold text-gray-900 truncate leading-tight">
                 {t('nav.appName')}
               </h1>
-              <p className="text-xs text-gray-600 font-medium md:hidden truncate">{t('nav.tagline')}</p>
+              <p className="text-[10px] sm:text-xs text-gray-600 font-medium md:hidden truncate leading-tight">{t('nav.tagline')}</p>
             </div>
           </div>
           

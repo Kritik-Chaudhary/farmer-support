@@ -8,6 +8,7 @@ import {
   FileText, 
   LayoutDashboard
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface BottomNavProps {
   activeTab: string;
@@ -15,13 +16,15 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
+  const { t } = useTranslation();
+  
   const tabs = [
-    { id: 'dashboard', name: 'Home', icon: LayoutDashboard },
-    { id: 'assistant', name: 'Assistant', icon: MessageCircle },
-    { id: 'mandi', name: 'Prices', icon: TrendingUp },
-    { id: 'weather', name: 'Weather', icon: Cloud },
-    { id: 'crop-detection', name: 'Crop', icon: Camera },
-    { id: 'schemes', name: 'Schemes', icon: FileText },
+    { id: 'dashboard', name: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'assistant', name: t('nav.aiAssistant'), icon: MessageCircle },
+    { id: 'mandi', name: t('nav.mandiPrices'), icon: TrendingUp },
+    { id: 'weather', name: t('nav.weather'), icon: Cloud },
+    { id: 'crop-detection', name: t('nav.cropHealth'), icon: Camera },
+    { id: 'schemes', name: t('nav.schemes'), icon: FileText },
   ];
 
   return (

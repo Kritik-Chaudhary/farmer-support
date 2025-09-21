@@ -7,14 +7,30 @@ import { useEffect, useState } from 'react';
 export default function LanguageSelector() {
   const { i18n } = useTranslation();
   const [mounted, setMounted] = useState(false);
+  const [currentLang, setCurrentLang] = useState('en');
 
   useEffect(() => {
     setMounted(true);
     // Load saved language preference
     const savedLang = localStorage.getItem('preferredLanguage');
-    if (savedLang) {
+    if (savedLang && savedLang !== i18n.language) {
       i18n.changeLanguage(savedLang);
+      setCurrentLang(savedLang);
+    } else {
+      setCurrentLang(i18n.language);
     }
+  }, [i18n]);
+
+  // Listen for language changes
+  useEffect(() => {
+    const handleLanguageChange = (lng: string) => {
+      setCurrentLang(lng);
+    };
+    
+    i18n.on('languageChanged', handleLanguageChange);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChange);
+    };
   }, [i18n]);
 
   const languages = [
@@ -30,6 +46,7 @@ export default function LanguageSelector() {
 
   const changeLanguage = (langCode: string) => {
     i18n.changeLanguage(langCode);
+    setCurrentLang(langCode);
     localStorage.setItem('preferredLanguage', langCode);
   };
 
@@ -39,7 +56,7 @@ export default function LanguageSelector() {
     <div className="flex items-center space-x-1">
       <Languages className="h-3 w-3 md:h-4 md:w-4 text-gray-700" />
       <select
-        value={i18n.language}
+        value={currentLang}
         onChange={(e) => changeLanguage(e.target.value)}
         className="bg-white border border-gray-300 rounded-lg px-1 md:px-2 py-1 text-xs md:text-sm text-gray-900 font-medium focus:outline-none focus:border-green-500"
       >

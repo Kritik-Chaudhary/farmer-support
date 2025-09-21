@@ -21,60 +21,59 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
   const features = [
     {
       title: t('assistant.title'),
-      description: 'Get instant answers about crops, weather, and farming practices',
+      description: t('dashboard.aiAssistantDesc'),
       icon: MessageCircle,
       color: 'bg-blue-500',
-      stats: 'Available 24/7',
+      stats: t('dashboard.availableAlways'),
       tabKey: 'assistant'
     },
     {
       title: t('mandi.title'),
-      description: 'Real-time market prices for your crops across different mandis',
+      description: t('dashboard.mandiPricesDesc'),
       icon: TrendingUp,
       color: 'bg-green-500',
-      stats: '500+ Markets',
+      stats: t('dashboard.marketsCount'),
       tabKey: 'mandi'
     },
     {
       title: t('weather.title'),
-      description: 'Get weather forecasts and alerts for your farming area',
+      description: t('dashboard.weatherAlertsDesc'),
       icon: Cloud,
       color: 'bg-yellow-500',
-      stats: '5-day forecast',
+      stats: t('dashboard.forecastDays'),
       tabKey: 'weather'
     },
     {
       title: t('crop.title'),
-      description: t('crop.subtitle'),
+      description: t('dashboard.cropHealthDesc'),
       icon: Camera,
       color: 'bg-red-500',
-      stats: '95% Accuracy',
+      stats: t('dashboard.accuracy'),
       tabKey: 'crop-detection'
     },
     {
       title: t('schemes.title'),
-      description: 'Browse and apply for farmer welfare schemes and subsidies',
+      description: t('dashboard.governmentSchemesDesc'),
       icon: FileText,
       color: 'bg-purple-500',
-      stats: '50+ Schemes',
+      stats: t('dashboard.schemesCount'),
       tabKey: 'schemes'
     }
   ];
 
   const quickStats = [
-    { label: 'Today\'s Temperature', value: '28°C', icon: Thermometer },
-    { label: 'Humidity', value: '65%', icon: Droplets },
-    { label: 'Active Farmers', value: '1000+', icon: Users },
+    { label: t('dashboard.temperature'), value: '28°C', icon: Thermometer },
+    { label: t('dashboard.humidity'), value: '65%', icon: Droplets },
+    { label: t('dashboard.activeFarmers'), value: '1000+', icon: Users },
   ];
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg p-4 md:p-8">
-        <h1 className="text-xl md:text-3xl font-bold mb-2 text-white drop-shadow-md">Welcome to Farmer Support App</h1>
+        <h1 className="text-xl md:text-3xl font-bold mb-2 text-white drop-shadow-md">{t('dashboard.welcome')}</h1>
         <p className="text-sm md:text-lg text-green-50 font-medium">
-          Your comprehensive digital companion for modern farming. Access AI-powered insights, 
-          market prices, weather updates, and government schemes all in one place.
+          {t('dashboard.description')}
         </p>
       </div>
 
@@ -134,24 +133,24 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
 
       {/* Tips Section */}
       <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Today&apos;s Farming Tips</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t('dashboard.todaysTips')}</h2>
         <div className="space-y-3">
           <div className="flex items-start space-x-3">
             <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
             <p className="text-gray-800 font-medium">
-              <strong className="text-gray-900">Weather Alert:</strong> Light rain expected tomorrow. Good time for sowing if soil conditions are right.
+              <strong className="text-gray-900">{t('dashboard.weatherAlert')}:</strong> {t('dashboard.lightRainTip')}
             </p>
           </div>
           <div className="flex items-start space-x-3">
             <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
             <p className="text-gray-800 font-medium">
-              <strong className="text-gray-900">Market Update:</strong> Wheat prices showing upward trend. Consider timing your sales accordingly.
+              <strong className="text-gray-900">{t('dashboard.marketUpdate')}:</strong> {t('dashboard.wheatPriceTip')}
             </p>
           </div>
           <div className="flex items-start space-x-3">
             <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
             <p className="text-gray-800 font-medium">
-              <strong className="text-gray-900">Seasonal Tip:</strong> This is the ideal time for soil testing. Use our Soil Health feature to get recommendations.
+              <strong className="text-gray-900">{t('dashboard.seasonalTip')}:</strong> {t('dashboard.soilTestTip')}
             </p>
           </div>
         </div>

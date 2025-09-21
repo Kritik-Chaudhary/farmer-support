@@ -83,7 +83,7 @@ export default function WeatherAlerts() {
 
   if (!weatherData) {
     return (
-      <div className="text-center text-gray-500">No weather data available</div>
+      <div className="text-center text-gray-500">{t('weather.noDataAvailable')}</div>
     );
   }
 
@@ -94,7 +94,7 @@ export default function WeatherAlerts() {
         <div className="flex items-center gap-2 text-sm text-gray-700 font-medium bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg">
           <MapPin className="h-4 w-4 text-blue-600" />
           <span>
-            🌐 Location automatically detected from your network
+            🌐 {t('weather.locationDetected')}
           </span>
         </div>
       )}
@@ -109,7 +109,7 @@ export default function WeatherAlerts() {
             </h2>
             <p className="text-3xl md:text-5xl font-bold mb-2 text-white drop-shadow-lg">{weatherData.current.temperature}°C</p>
             <p className="text-sm md:text-lg text-blue-50 font-medium">
-              Feels like {weatherData.current.feels_like}°C
+              {t('weather.feelsLike')} {weatherData.current.feels_like}°C
             </p>
             <p className="text-base md:text-xl capitalize mt-2 text-white font-medium">
               {weatherData.current.weather.description}
@@ -125,7 +125,7 @@ export default function WeatherAlerts() {
             <div className="flex items-center space-x-2">
               <Droplets className="h-5 w-5 text-white" />
               <div>
-                <p className="text-sm text-blue-50 font-medium">Humidity</p>
+                <p className="text-sm text-blue-50 font-medium">{t('weather.humidity')}</p>
                 <p className="text-lg font-bold text-white">{weatherData.current.humidity}%</p>
               </div>
             </div>
@@ -134,7 +134,7 @@ export default function WeatherAlerts() {
             <div className="flex items-center space-x-2">
               <Wind className="h-5 w-5 text-white" />
               <div>
-                <p className="text-sm text-blue-50 font-medium">Wind Speed</p>
+                <p className="text-sm text-blue-50 font-medium">{t('weather.windSpeed')}</p>
                 <p className="text-lg font-bold text-white">{weatherData.current.wind.speed} m/s</p>
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function WeatherAlerts() {
             <div className="flex items-center space-x-2">
               <Thermometer className="h-5 w-5 text-white" />
               <div>
-                <p className="text-sm text-blue-50 font-medium">Pressure</p>
+                <p className="text-sm text-blue-50 font-medium">{t('weather.pressure')}</p>
                 <p className="text-lg font-bold text-white">{weatherData.current.pressure} hPa</p>
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function WeatherAlerts() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-xl font-semibold mb-4 flex items-center">
             <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
-            Agricultural Weather Alerts
+            {t('weather.alerts')}
           </h3>
           <div className="space-y-3">
             {weatherData.alerts.map((alert, index) => (
@@ -179,7 +179,7 @@ export default function WeatherAlerts() {
 
       {/* 5-Day Forecast */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">5-Day Forecast</h3>
+        <h3 className="text-xl font-bold text-gray-800 mb-4">{t('weather.forecast')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {weatherData.forecast.map((day, index) => (
             <div key={index} className="text-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition-all">

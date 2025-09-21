@@ -209,7 +209,7 @@ export default function MandiPrices() {
               ) : filteredPrices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                    No prices found
+                    {t('mandi.noPricesFound')}
                   </td>
                 </tr>
               ) : (

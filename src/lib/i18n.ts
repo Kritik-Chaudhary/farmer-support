@@ -25,7 +25,20 @@ const resources = {
         activeFarmers: 'Active Farmers',
         weatherAlert: 'Weather Alert',
         marketUpdate: 'Market Update',
-        seasonalTip: 'Seasonal Tip'
+        seasonalTip: 'Seasonal Tip',
+        aiAssistantDesc: 'Get instant answers about crops, weather, and farming practices',
+        mandiPricesDesc: 'Real-time market prices for your crops across different mandis',
+        weatherAlertsDesc: 'Get weather forecasts and alerts for your farming area',
+        cropHealthDesc: 'AI-powered crop disease detection and treatment recommendations',
+        governmentSchemesDesc: 'Browse and apply for farmer welfare schemes and subsidies',
+        availableAlways: 'Available 24/7',
+        marketsCount: '500+ Markets',
+        forecastDays: '5-day forecast',
+        accuracy: '95% Accuracy',
+        schemesCount: '50+ Schemes',
+        lightRainTip: 'Light rain expected tomorrow. Good time for sowing if soil conditions are right.',
+        wheatPriceTip: 'Wheat prices showing upward trend. Consider timing your sales accordingly.',
+        soilTestTip: 'This is the ideal time for soil testing. Use our Soil Health feature to get recommendations.'
       },
       // AI Assistant
       assistant: {
@@ -40,7 +53,10 @@ const resources = {
         suggestedQuestions: 'Suggested questions',
         selectLanguage: 'Select Language',
         voiceEnabled: 'Voice Enabled',
-        textMode: 'Text Mode'
+        textMode: 'Text Mode',
+        thinking: 'Thinking...',
+        stopSpeaking: 'Stop Speaking',
+        holdToSpeak: 'Press and hold the mic button to speak'
       },
       // Mandi Prices
       mandi: {
@@ -57,7 +73,8 @@ const resources = {
         maxPrice: 'Max Price',
         modalPrice: 'Modal Price',
         swipeHint: 'Swipe left/right to see all columns',
-        perQuintal: '₹/Quintal'
+        perQuintal: '₹/Quintal',
+        noPricesFound: 'No prices found'
       },
       // Weather
       weather: {
@@ -74,7 +91,9 @@ const resources = {
         heatWarning: 'High temperature alert! Ensure adequate irrigation.',
         humidityWarning: 'High humidity detected. Monitor crops for fungal diseases.',
         windWarning: 'Strong winds expected. Secure loose structures.',
-        rainForecast: 'Rain expected in the next 24 hours.'
+        rainForecast: 'Rain expected in the next 24 hours.',
+        noDataAvailable: 'No weather data available',
+        locationDetected: 'Location automatically detected from your network'
       },
       // Crop Detection
       crop: {
@@ -95,7 +114,15 @@ const resources = {
         treatment: 'Treatment Recommendations',
         prevention: 'Prevention Measures',
         urgency: 'Urgency Level',
-        tips: 'Tips for Better Analysis'
+        tips: 'Tips for Better Analysis',
+        listenToResults: 'Listen to Results',
+        stopSpeaking: 'Stop Speaking',
+        problemsDetected: 'Problems Detected',
+        recommendedSolutions: 'Recommended Solutions',
+        tip1: 'Take clear, well-lit photos in natural daylight',
+        tip2: 'Focus on affected areas of the plant',
+        tip3: 'Include both close-ups and overall plant views',
+        tip4: 'Avoid blurry or dark images'
       },
       // Government Schemes
       schemes: {
@@ -193,7 +220,20 @@ const resources = {
         activeFarmers: 'सक्रिय किसान',
         weatherAlert: 'मौसम चेतावनी',
         marketUpdate: 'बाजार अपडेट',
-        seasonalTip: 'मौसमी सुझाव'
+        seasonalTip: 'मौसमी सुझाव',
+        aiAssistantDesc: 'फसलों, मौसम और कृषि प्रथाओं के बारे में तुरंत उत्तर प्राप्त करें',
+        mandiPricesDesc: 'विभिन्न मंडियों में आपकी फसलों के लिए वास्तविक समय बाजार मूल्य',
+        weatherAlertsDesc: 'अपने कृषि क्षेत्र के लिए मौसम पूर्वानुमान और अलर्ट प्राप्त करें',
+        cropHealthDesc: 'AI-संचालित फसल रोग पहचान और उपचार सिफारिशें',
+        governmentSchemesDesc: 'किसान कल्याण योजनाओं और सब्सिडी को ब्राउज़ करें और आवेदन करें',
+        availableAlways: '24/7 उपलब्ध',
+        marketsCount: '500+ मार्केट',
+        forecastDays: '5-दिन पूर्वानुमान',
+        accuracy: '95% सटीकता',
+        schemesCount: '50+ योजनाएं',
+        lightRainTip: 'कल हल्की बारिश की उम्मीद है। मिट्टी की स्थिति सही होने पर बुवाई का अच्छा समय है।',
+        wheatPriceTip: 'गेहूं की कीमतें बढ़ने की प्रवृत्ति दिखा रही हैं। अपनी बिक्री का समय तय करने पर विचार करें।',
+        soilTestTip: 'यह मिट्टी परीक्षण के लिए आदर्श समय है। सिफारिशों के लिए हमारे मिट्टी स्वास्थ्य फीचर का उपयोग करें।'
       },
       assistant: {
         title: 'AI खेती सहायक',
@@ -207,7 +247,10 @@ const resources = {
         suggestedQuestions: 'सुझाए गए प्रश्न',
         selectLanguage: 'भाषा चुनें',
         voiceEnabled: 'आवाज़ सक्षम',
-        textMode: 'टेक्स्ट मोड'
+        textMode: 'टेक्सट मोड',
+        thinking: 'सोच रहा हूं...',
+        stopSpeaking: 'बोलना बंद करें',
+        holdToSpeak: 'बोलने के लिए माइक बटन दबाएं और दबाकर रखें'
       },
       mandi: {
         title: 'लाइव मंडी भाव',
@@ -223,7 +266,8 @@ const resources = {
         maxPrice: 'अधिकतम मूल्य',
         modalPrice: 'मोडल मूल्य',
         swipeHint: 'सभी कॉलम देखने के लिए बाएं/दाएं स्वाइप करें',
-        perQuintal: '₹/क्विंटल'
+        perQuintal: '₹/क्विंटल',
+        noPricesFound: 'कोई मूल्य नहीं मिला'
       },
       weather: {
         title: 'मौसम पूर्वानुमान',
@@ -239,7 +283,9 @@ const resources = {
         heatWarning: 'उच्च तापमान चेतावनी! पर्याप्त सिंचाई सुनिश्चित करें।',
         humidityWarning: 'उच्च आर्द्रता। फंगल रोगों के लिए फसलों की निगरानी करें।',
         windWarning: 'तेज़ हवाएं अपेक्षित। ढीली संरचनाओं को सुरक्षित करें।',
-        rainForecast: 'अगले 24 घंटों में बारिश की संभावना।'
+        rainForecast: 'अगले 24 घंटों में बारिश की संभावना।',
+        noDataAvailable: 'कोई मौसम डेटा उपलब्ध नहीं',
+        locationDetected: 'आपके नेटवर्क से स्वतः स्थान का पता लगाया गया'
       },
       crop: {
         title: 'फसल स्वास्थ्य जांच',
@@ -259,7 +305,15 @@ const resources = {
         treatment: 'उपचार सिफारिशें',
         prevention: 'रोकथाम उपाय',
         urgency: 'तात्कालिकता स्तर',
-        tips: 'बेहतर विश्लेषण के लिए सुझाव'
+        tips: 'बेहतर विश्लेषण के लिए सुझाव',
+        listenToResults: 'परिणाम सुनें',
+        stopSpeaking: 'बोलना बंद करें',
+        problemsDetected: 'समस्याएं मिलीं',
+        recommendedSolutions: 'सुझाए गए समाधान',
+        tip1: 'प्राकृतिक दिन के प्रकाश में साफ तस्वीरें लें',
+        tip2: 'पौधे के प्रभावित हिस्सों पर ध्यान दें',
+        tip3: 'क्लोज़-अप और समग्र पौधे के दृश्य शामिल करें',
+        tip4: 'धुंधली या अंधेरी तस्वीरों से बचें'
       },
       schemes: {
         title: 'किसानों के लिए सरकारी योजनाएं',
@@ -492,8 +546,12 @@ i18n
     resources,
     lng: 'en', // Default language
     fallbackLng: 'en',
+    debug: false, // Set to true for debugging
     interpolation: {
       escapeValue: false
+    },
+    react: {
+      useSuspense: false
     }
   });
 

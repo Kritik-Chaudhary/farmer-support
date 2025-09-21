@@ -18,7 +18,7 @@ interface CropAnalysis {
 }
 
 export default function CropDetection() {
-  // const { i18n } = useTranslation(); // Unused for now
+  const { t, i18n } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [analysis, setAnalysis] = useState<CropAnalysis | null>(null);
@@ -95,6 +95,7 @@ export default function CropDetection() {
     setLoading(true);
     const formData = new FormData();
     formData.append('image', selectedImage);
+    formData.append('language', i18n.language);
 
     try {
       const response = await fetch('/api/crop-detection', {
@@ -224,10 +225,10 @@ export default function CropDetection() {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
           <Camera className="h-6 w-6 mr-2 text-green-600" />
-          Crop Health Detection
+          {t('crop.title')}
         </h2>
         <p className="text-gray-700 font-medium">
-          Upload a photo of your crop to get AI-powered disease detection and treatment recommendations
+          {t('crop.subtitle')}
         </p>
       </div>
 
@@ -237,8 +238,8 @@ export default function CropDetection() {
           {!imagePreview ? (
             <div className="text-center">
               <Upload className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-              <p className="text-gray-700 font-medium mb-2">Click to upload an image of your crop</p>
-              <p className="text-sm text-gray-600 font-medium mb-4">Supported formats: JPG, PNG (Max 10MB)</p>
+              <p className="text-gray-700 font-medium mb-2">{t('crop.upload')}</p>
+              <p className="text-sm text-gray-600 font-medium mb-4">{t('crop.formats')}</p>
               <label className="cursor-pointer">
                 <input
                   type="file"
@@ -247,7 +248,7 @@ export default function CropDetection() {
                   className="hidden"
                 />
                 <span className="bg-green-600 text-white px-6 py-2 rounded-lg inline-block hover:bg-green-700 transition-colors">
-                  Choose Image
+                  {t('crop.chooseImage')}
                 </span>
               </label>
             </div>
@@ -271,7 +272,7 @@ export default function CropDetection() {
                     className="hidden"
                   />
                   <span className="bg-gray-600 text-white px-4 py-2 rounded-lg inline-block hover:bg-gray-700 transition-colors">
-                    Change Image
+                    {t('crop.changeImage')}
                   </span>
                 </label>
                 <button
@@ -279,7 +280,7 @@ export default function CropDetection() {
                   disabled={loading}
                   className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                 >
-                  {loading ? 'Analyzing...' : 'Analyze Crop'}
+                  {loading ? t('crop.analyzing') : t('crop.analyze')}
                 </button>
               </div>
             </div>
@@ -291,7 +292,7 @@ export default function CropDetection() {
       {analysis && (
         <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">Analysis Results</h3>
+            <h3 className="text-xl font-bold text-gray-900">{t('crop.results')}</h3>
             <button
               onClick={speakAnalysis}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -302,7 +303,7 @@ export default function CropDetection() {
             >
               <Volume2 className="h-4 w-4" />
               <span className="text-sm font-medium">
-                {isSpeaking ? 'Stop Speaking' : 'Listen to Results'}
+                {isSpeaking ? t('crop.stopSpeaking') : t('crop.listenToResults')}
               </span>
             </button>
           </div>
@@ -310,7 +311,7 @@ export default function CropDetection() {
           {/* Basic Info Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-2">Crop Type</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">{t('crop.plantType')}</h4>
               {formatToBulletPoints(analysis.plantType, 2).length > 0 ? (
                 <ul className="space-y-1">
                   {formatToBulletPoints(analysis.plantType, 2).map((point, index) => (
@@ -325,7 +326,7 @@ export default function CropDetection() {
               )}
             </div>
             <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-2">Health Status</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">{t('crop.healthStatus')}</h4>
               {formatToBulletPoints(analysis.healthStatus, 2).length > 0 ? (
                 <ul className="space-y-1">
                   {formatToBulletPoints(analysis.healthStatus, 2).map((point, index) => (
@@ -340,7 +341,7 @@ export default function CropDetection() {
               )}
             </div>
             <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-600 mb-2">Urgency Level</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">{t('crop.urgency')}</h4>
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${getUrgencyColor(analysis.urgency)}`}>
                 {analysis.urgency}
               </span>
@@ -351,19 +352,19 @@ export default function CropDetection() {
           <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
             <h4 className="font-bold text-red-800 mb-3 flex items-center text-lg">
               <AlertTriangle className="h-5 w-5 mr-2" />
-              Problems Detected
+              {t('crop.problemsDetected')}
             </h4>
             
             <div className="space-y-3">
               <div>
-                <h5 className="font-semibold text-red-800 mb-1">Disease/Problem:</h5>
+                <h5 className="font-semibold text-red-800 mb-1">{t('crop.disease')}:</h5>
                 <p className="text-red-700 font-medium leading-relaxed">
                   {formatToShortText(analysis.diseaseIdentification, 120)}
                 </p>
               </div>
               
               <div>
-                <h5 className="font-semibold text-red-800 mb-1">Symptoms & Causes:</h5>
+                <h5 className="font-semibold text-red-800 mb-1">{t('crop.symptoms')} & {t('crop.causes')}:</h5>
                 <p className="text-red-700 leading-relaxed">
                   {formatToShortText(`${analysis.symptoms} ${analysis.causes}`, 250)}
                 </p>
@@ -375,19 +376,19 @@ export default function CropDetection() {
           <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
             <h4 className="font-bold text-green-800 mb-3 flex items-center text-lg">
               <CheckCircle className="h-5 w-5 mr-2" />
-              Recommended Solutions
+              {t('crop.recommendedSolutions')}
             </h4>
             
             <div className="space-y-3">
               <div>
-                <h5 className="font-semibold text-green-800 mb-1">Treatment Steps:</h5>
+                <h5 className="font-semibold text-green-800 mb-1">{t('crop.treatment')}:</h5>
                 <p className="text-green-700 leading-relaxed">
                   {formatToShortText(analysis.treatment, 250)}
                 </p>
               </div>
               
               <div>
-                <h5 className="font-semibold text-green-800 mb-1">Prevention Measures:</h5>
+                <h5 className="font-semibold text-green-800 mb-1">{t('crop.prevention')}:</h5>
                 <p className="text-green-700 leading-relaxed">
                   {formatToShortText(analysis.prevention, 250)}
                 </p>
@@ -399,12 +400,12 @@ export default function CropDetection() {
 
       {/* Tips */}
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-        <h4 className="text-yellow-800 font-semibold mb-2">Tips for Better Analysis</h4>
+        <h4 className="text-yellow-800 font-semibold mb-2">{t('crop.tips')}</h4>
         <ul className="text-yellow-700 text-sm space-y-1">
-          <li>• Take clear, well-lit photos in natural daylight</li>
-          <li>• Focus on affected areas of the plant</li>
-          <li>• Include both close-ups and overall plant views</li>
-          <li>• Avoid blurry or dark images</li>
+          <li>• {t('crop.tip1')}</li>
+          <li>• {t('crop.tip2')}</li>
+          <li>• {t('crop.tip3')}</li>
+          <li>• {t('crop.tip4')}</li>
         </ul>
       </div>
     </div>

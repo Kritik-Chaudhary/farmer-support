@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FileText, ChevronRight, Search, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Scheme {
   id: number;
@@ -18,6 +19,7 @@ interface Scheme {
 }
 
 export default function GovernmentSchemes() {
+  const { t, i18n } = useTranslation();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -27,7 +29,7 @@ export default function GovernmentSchemes() {
 
   useEffect(() => {
     fetchSchemes();
-  }, [selectedCategory, searchTerm]); // fetchSchemes is stable
+  }, [selectedCategory, searchTerm, i18n.language]); // fetchSchemes is stable
 
   const fetchSchemes = async () => {
     setLoading(true);
@@ -35,6 +37,7 @@ export default function GovernmentSchemes() {
       const params = new URLSearchParams();
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (searchTerm) params.append('search', searchTerm);
+      params.append('language', i18n.language);
 
       const response = await fetch(`/api/government-schemes?${params}`);
       const data = await response.json();
@@ -64,7 +67,7 @@ export default function GovernmentSchemes() {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
           <FileText className="h-6 w-6 mr-2 text-green-600" />
-          Government Schemes for Farmers
+          {t('schemes.title')}
         </h2>
         
         {/* Search and Filter */}
@@ -75,7 +78,7 @@ export default function GovernmentSchemes() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search schemes..."
+              placeholder={t('schemes.search')}
               className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white"
             />
           </div>
@@ -85,7 +88,7 @@ export default function GovernmentSchemes() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium bg-white"
           >
-            <option value="all" className="text-gray-900 font-medium">All Categories</option>
+            <option value="all" className="text-gray-900 font-medium">{t('schemes.allCategories')}</option>
             {categories.map(cat => (
               <option key={cat} value={cat} className="text-gray-900 font-medium">{cat}</option>
             ))}
@@ -112,7 +115,7 @@ export default function GovernmentSchemes() {
                     </div>
                   </div>
                   <span className="text-xs bg-gray-100 text-gray-700 font-semibold px-2 py-1 rounded border border-gray-200">
-                    Since {scheme.launchYear}
+                    {t('schemes.since')} {scheme.launchYear}
                   </span>
                 </div>
                 
@@ -135,7 +138,7 @@ export default function GovernmentSchemes() {
                   onClick={() => setSelectedScheme(scheme)}
                   className="text-green-600 font-medium text-sm flex items-center hover:text-green-700"
                 >
-                  View Details <ChevronRight className="h-4 w-4 ml-1" />
+                  {t('schemes.viewDetails')} <ChevronRight className="h-4 w-4 ml-1" />
                 </button>
               </div>
             </div>
@@ -164,12 +167,12 @@ export default function GovernmentSchemes() {
             
             <div className="p-4 md:p-6 space-y-4 md:space-y-6">
               <div>
-                <h3 className="font-bold text-gray-900 mb-2">Description</h3>
+                <h3 className="font-bold text-gray-900 mb-2">{t('schemes.description')}</h3>
                 <p className="text-gray-700 font-medium">{selectedScheme.description}</p>
               </div>
               
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Benefits</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('schemes.benefits')}</h3>
                 <ul className="space-y-2">
                   {selectedScheme.benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start space-x-2">
@@ -181,7 +184,7 @@ export default function GovernmentSchemes() {
               </div>
               
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Eligibility Criteria</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('schemes.eligibility')}</h3>
                 <ul className="space-y-2">
                   {selectedScheme.eligibility.map((criteria, index) => (
                     <li key={index} className="flex items-start space-x-2">
@@ -193,7 +196,7 @@ export default function GovernmentSchemes() {
               </div>
               
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Required Documents</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('schemes.documents')}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedScheme.documents.map((doc, index) => (
                     <div key={index} className="bg-gray-50 px-3 py-2 rounded text-sm text-gray-700">
@@ -204,7 +207,7 @@ export default function GovernmentSchemes() {
               </div>
               
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Application Process</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('schemes.process')}</h3>
                 <ol className="space-y-2">
                   {selectedScheme.applicationProcess.map((step, index) => (
                     <li key={index} className="flex items-start space-x-2">
@@ -224,7 +227,7 @@ export default function GovernmentSchemes() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <span>Visit Official Website</span>
+                  <span>{t('schemes.visitWebsite')}</span>
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </div>

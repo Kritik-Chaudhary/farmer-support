@@ -35,6 +35,10 @@ export default function AIAssistant() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [microphoneError, setMicrophoneError] = useState<string>('');
+  const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [recognitionActive, setRecognitionActive] = useState(false);
+  const startingRecognitionRef = useRef(false);
   
   // Use the global language from i18n
   const selectedLanguage = i18n.language;
@@ -48,6 +52,32 @@ export default function AIAssistant() {
       timestamp: new Date()
     }]);
   }, [selectedLanguage]);
+
+  // Check microphone permissions on mount
+  useEffect(() => {
+    const checkMicrophonePermission = async () => {
+      try {
+        if (navigator.permissions) {
+          const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          setMicrophonePermission(permission.state);
+          
+          permission.addEventListener('change', () => {
+            setMicrophonePermission(permission.state);
+            if (permission.state === 'denied') {
+              setMicrophoneError('Microphone access denied. Please enable microphone in browser settings.');
+              setVoiceEnabled(false);
+            } else if (permission.state === 'granted') {
+              setMicrophoneError('');
+            }
+          });
+        }
+      } catch (error) {
+        console.log('Permission API not supported:', error);
+      }
+    };
+    
+    checkMicrophonePermission();
+  }, []);
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -91,12 +121,81 @@ export default function AIAssistant() {
 
       recognitionRef.current.onend = () => {
         setIsListening(false);
+        setRecognitionActive(false);
+        startingRecognitionRef.current = false;
+      };
+      
+      // Add a start event handler to track when recognition actually starts
+      recognitionRef.current.onstart = () => {
+        setRecognitionActive(true);
+        startingRecognitionRef.current = false;
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+        const errorType = event.error as string;
+        
+        // Only log serious errors, not common user interaction issues
+        if (errorType !== 'no-speech' && errorType !== 'aborted') {
+          console.error('Speech recognition error:', errorType);
+        }
+        
         setIsListening(false);
+        setRecognitionActive(false);
+        
+        // Handle different error types with user-friendly messages
+        const errorMessages = {
+          'not-allowed': {
+            en: 'Microphone access denied. Please allow microphone access in your browser settings and try again.',
+            hi: 'माइक्रोफोन एक्सेस अस्वीकृत। कृपया अपनी ब्राउज़र सेटिंग्स में माइक्रोफोन एक्सेस की अनुमति दें और फिर कोशिश करें।'
+          },
+          'no-speech': {
+            en: 'No speech detected. Try speaking louder or closer to the microphone.',
+            hi: 'कोई आवाज़ नहीं मिली। तेज़ या माइक्रोफोन के पास बोलने की कोशिश करें।'
+          },
+          'audio-capture': {
+            en: 'No microphone found. Please check your microphone connection.',
+            hi: 'माइक्रोफोन नहीं मिला। कृपया अपना माइक्रोफोन कनेक्शन जांचें।'
+          },
+          'network': {
+            en: 'Network error occurred. Please check your internet connection.',
+            hi: 'नेटवर्क एरर हुआ। कृपया अपना इंटरनेट कनेक्शन जांचें।'
+          }
+        };
+        
+        const errorMessage = errorMessages[errorType as keyof typeof errorMessages];
+        
+        // Only show error messages for significant errors
+        // Don't show errors for 'aborted' (user stopped manually) or temporary 'no-speech' in some cases
+        if (errorMessage && errorType !== 'aborted') {
+          const message = errorMessage[selectedLanguage as keyof typeof errorMessage] || errorMessage.en;
+          
+          // For 'no-speech', show a less intrusive message and clear it after a delay
+          if (errorType === 'no-speech') {
+            setMicrophoneError(message);
+            setTimeout(() => {
+              setMicrophoneError('');
+            }, 3000); // Clear 'no-speech' error after 3 seconds
+          } else {
+            setMicrophoneError(message);
+            
+            if (errorType === 'not-allowed') {
+              setMicrophonePermission('denied');
+              setVoiceEnabled(false);
+            }
+          }
+        } else if (errorType !== 'aborted' && errorType !== 'no-speech') {
+          // Fallback for unknown errors (but not for aborted or no-speech)
+          const fallbackMessage = selectedLanguage === 'hi' 
+            ? 'वॉयस रिकॉग्निशन में समस्या हुई। कृपया दोबारा कोशिश करें।'
+            : 'Voice recognition error occurred. Please try again.';
+          setMicrophoneError(fallbackMessage);
+        }
+        
+        // Always reset state on any error to prevent stuck states
+        setIsListening(false);
+        setRecognitionActive(false);
+        startingRecognitionRef.current = false;
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,18 +209,95 @@ export default function AIAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const startListening = () => {
-    if (recognitionRef.current && !isListening) {
+  const startListening = async () => {
+    if (!recognitionRef.current || isListening || recognitionActive || startingRecognitionRef.current) return;
+    
+    startingRecognitionRef.current = true;
+    
+    // Clear any previous errors
+    setMicrophoneError('');
+    
+    try {
+      // Force stop any ongoing recognition first
+      try {
+        recognitionRef.current.abort();
+      } catch (abortError) {
+        // Ignore abort errors
+      }
+      
+      // Wait a bit longer to ensure recognition is fully stopped
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Request microphone permission first
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      
+      // Double-check if we can start (in case state changed during the delay)
+      if (isListening || recognitionActive) {
+        return;
+      }
+      
       setIsListening(true);
-      recognitionRef.current.start();
+      setRecognitionActive(true);
+      
+      // Wrap start in try-catch to handle InvalidStateError gracefully
+      try {
+        recognitionRef.current.start();
+        setMicrophonePermission('granted');
+        startingRecognitionRef.current = false;
+      } catch (startError: unknown) {
+        // If recognition is already started, try to recover
+        setIsListening(false);
+        setRecognitionActive(false);
+        
+        if (startError instanceof Error && startError.name === 'InvalidStateError') {
+          console.log('Recognition already started, attempting recovery');
+          
+          // Try to abort and restart after a longer delay
+          try {
+            recognitionRef.current.abort();
+          } catch (abortError) {
+            // Ignore abort errors
+          }
+          
+          setTimeout(async () => {
+            if (!isListening && !recognitionActive && !startingRecognitionRef.current) {
+              await startListening();
+            }
+          }, 300);
+          startingRecognitionRef.current = false;
+          return;
+        } else {
+          throw startError; // Re-throw other errors
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Microphone permission error:', error);
+      setIsListening(false);
+      setRecognitionActive(false);
+      startingRecognitionRef.current = false;
+      setMicrophonePermission('denied');
+      
+      const permissionErrorMessage = selectedLanguage === 'hi'
+        ? 'माइक्रोफोन की अनुमति देने के लिए कृपया ब्राउज़र में "Allow" पर क्लिक करें।'
+        : 'Please click "Allow" in your browser to enable microphone access.';
+      
+      setMicrophoneError(permissionErrorMessage);
     }
   };
 
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        // Ignore errors when stopping recognition
+        console.log('Recognition stop error (ignored):', error);
+      }
       setIsListening(false);
-      if (inputMessage) {
+      setRecognitionActive(false);
+      if (inputMessage.trim()) {
         sendMessage(true);
       }
     }
@@ -217,9 +393,23 @@ export default function AIAssistant() {
 
       const data = await response.json();
 
+      // Error messages in different languages
+      const errorMessages = {
+        en: 'I apologize, but I could not process your request. Please try again.',
+        hi: 'माफ करें, मैं आपके अनुरोध को प्रोसेस नहीं कर सका। कृपया पुनः प्रयास करें।',
+        pa: 'ਮਾਫ ਕਰੋ, ਮੈਂ ਤੁਹਾਡੀ ਬੇਨਤੀ ਦਾ ਜਵਾਬ ਨਹੀਂ ਦੇ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+        ta: 'மன்னிக்கவும், உங்கள் கேள்வியை நான் செயல்படுத்த முடியவில்லை। தயவு செய்து மீண்டும் முயற்சிக்கவும்।',
+        te: 'క్షమించండి, నేను మీ విన్నపాని ప్రొసెస్ చేయలేకపోయాను। దయచేసి మరలా ప्रयत्निशलु।',
+        mr: 'माफ करा, मी तुमच्या विनंतीवर प्रक्रिया करू शकलो नाही। कृपया पुन्हा प्रयत्न करा।',
+        gu: 'માફ કરો, હું તમારી વિનંતી પર પ્રક્રિયા કરી શક્યો નઞી। કૃપા કરીને ફરીથી પ્રયાસ કરો।',
+        bn: 'দুঃখিত, আমি আপনার অনুরোধ প্রক্রিয়া করতে পারিনি। অনুগ্রহ করে আবার চেষ্টা করুন।'
+      };
+      
+      const errorMessage = errorMessages[selectedLanguage as keyof typeof errorMessages] || errorMessages.en;
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || 'I apologize, but I could not process your request. Please try again.',
+        text: data.response || errorMessage,
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -231,9 +421,23 @@ export default function AIAssistant() {
         speakText(assistantMessage.text);
       }
     } catch (error) {
+      // Connection error messages in different languages
+      const connectionErrorMessages = {
+        en: 'Sorry, I am having trouble connecting. Please try again.',
+        hi: 'खेद है, मुझे कनेक्ट करने में समस्या हो रही है। कृपया पुनः प्रयास करें।',
+        pa: 'ਮਾਫ ਕਰੋ, ਮੈਨੂੰ ਕਨੈਕਟ ਕਰਨ ਵਿੱਚ ਸਮੱਸਿਆ ਵਾਪਰ ਰਹੀ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+        ta: 'ஒழ்க்கவும், நான் இணையம் அடைவதில் சிரமம் அனுபவிக்கிறேன்। தயவு செய்து மீண்டும் முயற்சிக்கவும்।',
+        te: 'క్షమించండి, నాకు కనెక్ట్ అవ్వడంలో కష్టం వస్తోంది। దయచేసి మరలా ప्रयत्निशलु।',
+        mr: 'माफ करा, मला जोडण्यात अडचण आली आहे। कृपया पुन्हा प्रयत्न करा।',
+        gu: 'માફ કરો, મને જોડવામાં ટેકી કે વાંધો આવી ગયો આછે। કૃપા કરીને ફરીથી પ्रयास करो।',
+        bn: 'দুঃখিত, আমার সংযোগ স্থাপনে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করুন।'
+      };
+      
+      const connectionErrorMessage = connectionErrorMessages[selectedLanguage as keyof typeof connectionErrorMessages] || connectionErrorMessages.en;
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Sorry, I am having trouble connecting. Please try again.',
+        text: connectionErrorMessage,
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -333,7 +537,10 @@ export default function AIAssistant() {
         <div className="px-4 py-2 border-b bg-gray-50 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              onClick={() => {
+                setVoiceEnabled(!voiceEnabled);
+                if (microphoneError) setMicrophoneError('');
+              }}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                 voiceEnabled 
                   ? 'bg-green-100 text-green-700' 
@@ -358,19 +565,38 @@ export default function AIAssistant() {
                 className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm"
               >
                 <Volume2 className="h-3 w-3 inline mr-1" />
-                Stop Speaking
+                {t('assistant.stopSpeaking')}
               </button>
             )}
           </div>
           <div className="text-xs text-gray-500">
             {isListening && (
               <span className="flex items-center text-red-600">
-                <span className="animate-pulse mr-2">●</span>
+                <span className="animate-pulse mr-2">•</span>
                 {t('assistant.listening')}
               </span>
             )}
           </div>
         </div>
+        
+        {/* Microphone Error Message */}
+        {microphoneError && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-200">
+            <div className="flex items-start space-x-2">
+              <MicOff className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-700">
+                <p className="font-medium">{microphoneError}</p>
+                {microphonePermission === 'denied' && (
+                  <p className="mt-1 text-xs">
+                    {selectedLanguage === 'hi' 
+                      ? 'ब्राउज़र सेटिंग्स में जाकर माइक्रोफोन की अनुमति दें।'
+                      : 'Go to browser settings to enable microphone access.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -413,7 +639,7 @@ export default function AIAssistant() {
             <div className="flex justify-start">
               <div className="flex items-center bg-gray-100 border border-gray-200 rounded-lg px-4 py-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                <span className="text-sm font-medium text-gray-700">Thinking...</span>
+                <span className="text-sm font-medium text-gray-700">{t('assistant.thinking')}</span>
               </div>
             </div>
           )}
@@ -454,11 +680,15 @@ export default function AIAssistant() {
                 onMouseUp={stopListening}
                 onTouchStart={startListening}
                 onTouchEnd={stopListening}
-                className={`p-2 rounded-lg transition-colors ${
+                disabled={microphonePermission === 'denied'}
+                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   isListening 
                     ? 'bg-red-500 text-white animate-pulse' 
+                    : microphonePermission === 'denied'
+                    ? 'bg-gray-400 text-white'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
+                title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
               >
                 {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
@@ -473,7 +703,15 @@ export default function AIAssistant() {
           </div>
           {voiceEnabled && (
             <p className="text-xs text-gray-500 text-center mt-2">
-              Press and hold the mic button to speak
+              {microphonePermission === 'denied' ? (
+                <span className="text-red-600">
+                  {selectedLanguage === 'hi' 
+                    ? 'माइक्रोफोन एक्सेस की आवश्यकता है | ब्राउज़र सेटिंग्स जांचें'
+                    : 'Microphone access required | Check browser settings'}
+                </span>
+              ) : (
+                t('assistant.holdToSpeak')
+              )}
             </p>
           )}
         </div>
