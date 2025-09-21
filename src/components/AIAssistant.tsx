@@ -41,6 +41,7 @@ export default function AIAssistant() {
   const [recognitionActive, setRecognitionActive] = useState(false);
   const startingRecognitionRef = useRef(false);
   const [autoRestartAfterResponse, setAutoRestartAfterResponse] = useState(false);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the global language from i18n
   const selectedLanguage = i18n.language;
@@ -106,6 +107,7 @@ export default function AIAssistant() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = true;
+      recognitionRef.current.maxAlternatives = 1;
       
       const currentLang = languages.find(l => l.code === selectedLanguage);
       recognitionRef.current.lang = currentLang?.voice || 'en-US';
@@ -121,10 +123,56 @@ export default function AIAssistant() {
         
         setInputMessage(transcript);
         inputMessageRef.current = transcript;
+        
+        // Clear existing silence timer
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+        }
+        
+        // Check if this is a final result
+        const isFinal = event.results[event.results.length - 1].isFinal;
+        
+        if (chatMode === 'voice' && transcript.trim()) {
+          if (isFinal) {
+            console.log('Final transcript received, stopping recognition');
+            // Stop recognition which will trigger onend and auto-send
+            setTimeout(() => {
+              if (recognitionRef.current && isListening) {
+                recognitionRef.current.stop();
+              }
+            }, 800); // Slightly longer delay to capture any trailing words
+          } else {
+            // Set a new silence timer for interim results
+            silenceTimerRef.current = setTimeout(() => {
+              console.log('Silence detected, stopping recognition');
+              if (recognitionRef.current && isListening && inputMessageRef.current.trim()) {
+                recognitionRef.current.stop();
+              }
+            }, 2000); // Stop after 2 seconds of silence
+          }
+        }
       };
 
       recognitionRef.current.onend = () => {
         console.log('Recognition ended');
+        
+        // Clear silence timer
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        
+        const currentInput = inputMessageRef.current.trim();
+        
+        // Auto-send message when recognition ends if there's content
+        if (chatMode === 'voice' && currentInput) {
+          console.log('Auto-sending voice message:', currentInput);
+          // Use setTimeout to ensure state updates properly
+          setTimeout(() => {
+            sendMessage(true);
+          }, 100);
+        }
+        
         setIsListening(false);
         setRecognitionActive(false);
         startingRecognitionRef.current = false;
@@ -296,14 +344,7 @@ export default function AIAssistant() {
     if (recognitionRef.current && isListening) {
       try {
         recognitionRef.current.stop();
-        // Manually trigger send message for voice mode after stopping
-        setTimeout(() => {
-          const currentInput = inputMessageRef.current.trim();
-          if (chatMode === 'voice' && currentInput) {
-            console.log('Sending voice message:', currentInput);
-            sendMessage(true);
-          }
-        }, 200); // Small delay to ensure input is captured
+        // Message will be sent automatically in onend event
       } catch (error) {
         // Ignore errors when stopping recognition
         console.log('Recognition stop error (ignored):', error);
@@ -314,8 +355,12 @@ export default function AIAssistant() {
   // Toggle voice listening (click to start/stop)
   const toggleVoiceListening = () => {
     if (isListening) {
+      // Manual stop - still send the message
       stopListening();
     } else {
+      // Clear any previous input when starting new recording
+      setInputMessage('');
+      inputMessageRef.current = '';
       startListening();
     }
   };
