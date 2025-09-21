@@ -38,10 +38,7 @@ export default function AIAssistant() {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [microphoneError, setMicrophoneError] = useState<string>('');
   const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
-  const [recognitionActive, setRecognitionActive] = useState(false);
-  const startingRecognitionRef = useRef(false);
-  const [autoRestartAfterResponse, setAutoRestartAfterResponse] = useState(false);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the global language from i18n
   const selectedLanguage = i18n.language;
@@ -106,153 +103,73 @@ export default function AIAssistant() {
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = true;
+      recognitionRef.current.interimResults = false; // Only get final results
       recognitionRef.current.maxAlternatives = 1;
       
       const currentLang = languages.find(l => l.code === selectedLanguage);
       recognitionRef.current.lang = currentLang?.voice || 'en-US';
 
+      // Simple result handler
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((result: any) => result[0])
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((result: any) => result.transcript)
-          .join('');
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice transcript:', transcript);
         
-        setInputMessage(transcript);
-        inputMessageRef.current = transcript;
-        
-        // Clear existing silence timer
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-        }
-        
-        // Check if this is a final result
-        const isFinal = event.results[event.results.length - 1].isFinal;
-        
-        if (chatMode === 'voice' && transcript.trim()) {
-          if (isFinal) {
-            console.log('Final transcript received, stopping recognition');
-            // Stop recognition which will trigger onend and auto-send
-            setTimeout(() => {
-              if (recognitionRef.current && isListening) {
-                recognitionRef.current.stop();
-              }
-            }, 800); // Slightly longer delay to capture any trailing words
-          } else {
-            // Set a new silence timer for interim results
-            silenceTimerRef.current = setTimeout(() => {
-              console.log('Silence detected, stopping recognition');
-              if (recognitionRef.current && isListening && inputMessageRef.current.trim()) {
-                recognitionRef.current.stop();
-              }
-            }, 2000); // Stop after 2 seconds of silence
-          }
+        if (transcript && transcript.trim()) {
+          setInputMessage(transcript);
+          inputMessageRef.current = transcript;
         }
       };
 
+      // Simple end handler - this is where we send the message
       recognitionRef.current.onend = () => {
-        console.log('Recognition ended');
-        
-        // Clear silence timer
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
-        
-        const currentInput = inputMessageRef.current.trim();
-        
-        // Auto-send message when recognition ends if there's content
-        if (chatMode === 'voice' && currentInput) {
-          console.log('Auto-sending voice message:', currentInput);
-          // Use setTimeout to ensure state updates properly
-          setTimeout(() => {
-            sendMessage(true);
-          }, 100);
-        }
-        
+        console.log('Recognition ended, isListening:', isListening);
         setIsListening(false);
-        setRecognitionActive(false);
-        startingRecognitionRef.current = false;
-      };
-      
-      // Add a start event handler to track when recognition actually starts
-      recognitionRef.current.onstart = () => {
-        setRecognitionActive(true);
-        startingRecognitionRef.current = false;
+        
+        // Clear any timeout
+        if (voiceTimeoutRef.current) {
+          clearTimeout(voiceTimeoutRef.current);
+          voiceTimeoutRef.current = null;
+        }
+        
+        // Send message if we have content in voice mode
+        const message = inputMessageRef.current.trim();
+        if (chatMode === 'voice' && message) {
+          console.log('Sending voice message:', message);
+          // Clear the input
+          setInputMessage('');
+          inputMessageRef.current = '';
+          // Send the message
+          sendVoiceMessage(message);
+        }
       };
 
+      // Simple error handler
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onerror = (event: any) => {
-        const errorType = event.error as string;
+        console.log('Recognition error:', event.error);
+        setIsListening(false);
         
-        // Only log serious errors, not common user interaction issues
-        if (errorType !== 'no-speech' && errorType !== 'aborted') {
-          console.error('Speech recognition error:', errorType);
+        if (voiceTimeoutRef.current) {
+          clearTimeout(voiceTimeoutRef.current);
+          voiceTimeoutRef.current = null;
         }
         
-        setIsListening(false);
-        setRecognitionActive(false);
-        
-        // Handle different error types with user-friendly messages
-        const errorMessages = {
-          'not-allowed': {
-            en: 'Microphone access denied. Please allow microphone access in your browser settings and try again.',
-            hi: 'माइक्रोफोन एक्सेस अस्वीकृत। कृपया अपनी ब्राउज़र सेटिंग्स में माइक्रोफोन एक्सेस की अनुमति दें और फिर कोशिश करें।'
-          },
-          'no-speech': {
-            en: 'No speech detected. Try speaking louder or closer to the microphone.',
-            hi: 'कोई आवाज़ नहीं मिली। तेज़ या माइक्रोफोन के पास बोलने की कोशिश करें।'
-          },
-          'audio-capture': {
-            en: 'No microphone found. Please check your microphone connection.',
-            hi: 'माइक्रोफोन नहीं मिला। कृपया अपना माइक्रोफोन कनेक्शन जांचें।'
-          },
-          'network': {
-            en: 'Network error occurred. Please check your internet connection.',
-            hi: 'नेटवर्क एरर हुआ। कृपया अपना इंटरनेट कनेक्शन जांचें।'
-          }
-        };
-        
-        const errorMessage = errorMessages[errorType as keyof typeof errorMessages];
-        
-        // Only show error messages for significant errors
-        // Don't show errors for 'aborted' (user stopped manually) or temporary 'no-speech' in some cases
-        if (errorMessage && errorType !== 'aborted') {
-          const message = errorMessage[selectedLanguage as keyof typeof errorMessage] || errorMessage.en;
-          
-          // For 'no-speech', show a less intrusive message and clear it after a delay
-          if (errorType === 'no-speech') {
-            setMicrophoneError(message);
-            setTimeout(() => {
-              setMicrophoneError('');
-            }, 3000); // Clear 'no-speech' error after 3 seconds
-          } else {
-            setMicrophoneError(message);
-            
-            if (errorType === 'not-allowed') {
-              setMicrophonePermission('denied');
-              setVoiceEnabled(false);
-            }
-          }
-        } else if (errorType !== 'aborted' && errorType !== 'no-speech') {
-          // Fallback for unknown errors (but not for aborted or no-speech)
-          const fallbackMessage = selectedLanguage === 'hi' 
-            ? 'वॉयस रिकॉग्निशन में समस्या हुई। कृपया दोबारा कोशिश करें।'
-            : 'Voice recognition error occurred. Please try again.';
-          setMicrophoneError(fallbackMessage);
+        if (event.error === 'not-allowed') {
+          setMicrophonePermission('denied');
+          setMicrophoneError(
+            selectedLanguage === 'hi' 
+              ? 'माइक्रोफोन की अनुमति दें'
+              : 'Please allow microphone access'
+          );
+        } else if (event.error === 'no-speech') {
+          // Just silently stop, no error message
+          console.log('No speech detected');
         }
-        
-        // Always reset state on any error to prevent stuck states
-        setIsListening(false);
-        setRecognitionActive(false);
-        startingRecognitionRef.current = false;
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLanguage]);
+  }, [selectedLanguage, chatMode]);
 
   useEffect(() => {
     scrollToBottom();
@@ -262,105 +179,64 @@ export default function AIAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Simple start listening function
   const startListening = async () => {
-    if (!recognitionRef.current || isListening || recognitionActive || startingRecognitionRef.current) return;
+    if (!recognitionRef.current || isListening) return;
     
-    startingRecognitionRef.current = true;
+    console.log('Starting voice recognition');
     
-    // Clear any previous errors
+    // Clear previous input and errors
+    setInputMessage('');
+    inputMessageRef.current = '';
     setMicrophoneError('');
     
     try {
-      // Force stop any ongoing recognition first
-      try {
-        recognitionRef.current.abort();
-      } catch (abortError) {
-        // Ignore abort errors
-      }
-      
-      // Wait a bit longer to ensure recognition is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Request microphone permission first
+      // Request microphone permission if needed
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         await navigator.mediaDevices.getUserMedia({ audio: true });
-      }
-      
-      // Double-check if we can start (in case state changed during the delay)
-      if (isListening || recognitionActive) {
-        return;
+        setMicrophonePermission('granted');
       }
       
       setIsListening(true);
-      setRecognitionActive(true);
+      recognitionRef.current.start();
       
-      // Wrap start in try-catch to handle InvalidStateError gracefully
-      try {
-        recognitionRef.current.start();
-        setMicrophonePermission('granted');
-        startingRecognitionRef.current = false;
-      } catch (startError: unknown) {
-        // If recognition is already started, try to recover
-        setIsListening(false);
-        setRecognitionActive(false);
-        
-        if (startError instanceof Error && startError.name === 'InvalidStateError') {
-          console.log('Recognition already started, attempting recovery');
-          
-          // Try to abort and restart after a longer delay
-          try {
-            recognitionRef.current.abort();
-          } catch (abortError) {
-            // Ignore abort errors
-          }
-          
-          setTimeout(async () => {
-            if (!isListening && !recognitionActive && !startingRecognitionRef.current) {
-              await startListening();
-            }
-          }, 300);
-          startingRecognitionRef.current = false;
-          return;
-        } else {
-          throw startError; // Re-throw other errors
+      // Set a timeout to automatically stop after 10 seconds
+      voiceTimeoutRef.current = setTimeout(() => {
+        console.log('Voice timeout - stopping recognition');
+        if (recognitionRef.current && isListening) {
+          recognitionRef.current.stop();
         }
-      }
-    } catch (error: unknown) {
-      console.error('Microphone permission error:', error);
+      }, 10000); // 10 second max recording time
+      
+    } catch (error) {
+      console.error('Failed to start recognition:', error);
       setIsListening(false);
-      setRecognitionActive(false);
-      startingRecognitionRef.current = false;
       setMicrophonePermission('denied');
-      
-      const permissionErrorMessage = selectedLanguage === 'hi'
-        ? 'माइक्रोफोन की अनुमति देने के लिए कृपया ब्राउज़र में "Allow" पर क्लिक करें।'
-        : 'Please click "Allow" in your browser to enable microphone access.';
-      
-      setMicrophoneError(permissionErrorMessage);
+      setMicrophoneError(
+        selectedLanguage === 'hi'
+          ? 'माइक्रोफोन की अनुमति दें'
+          : 'Please allow microphone access'
+      );
     }
   };
 
+  // Simple stop listening function
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
+      console.log('Stopping voice recognition');
       try {
         recognitionRef.current.stop();
-        // Message will be sent automatically in onend event
       } catch (error) {
-        // Ignore errors when stopping recognition
-        console.log('Recognition stop error (ignored):', error);
+        console.log('Stop error:', error);
       }
     }
   };
 
-  // Toggle voice listening (click to start/stop)
+  // Simple toggle for voice
   const toggleVoiceListening = () => {
     if (isListening) {
-      // Manual stop - still send the message
       stopListening();
     } else {
-      // Clear any previous input when starting new recording
-      setInputMessage('');
-      inputMessageRef.current = '';
       startListening();
     }
   };
@@ -381,17 +257,17 @@ export default function AIAssistant() {
     utterance.onend = () => {
       setIsSpeaking(false);
       // Auto-restart listening after AI finishes speaking in voice mode
-      if (chatMode === 'voice' && autoRestartAfterResponse) {
-        setAutoRestartAfterResponse(false);
+      if (chatMode === 'voice') {
         setTimeout(() => {
-          if (chatMode === 'voice' && !isListening) {
+          if (!isListening) {
+            console.log('Auto-restarting voice recognition after speech');
             startListening();
           }
-        }, 500); // Small delay before restarting
+        }, 1000); // 1 second delay before restarting
       }
     };
     utterance.onerror = (event) => {
-      console.log('Speech error (likely cancelled):', event.error);
+      console.log('Speech error:', event.error);
       setIsSpeaking(false);
     };
 
@@ -432,6 +308,66 @@ export default function AIAssistant() {
   const stopSpeechBeforeAction = () => {
     if (isSpeaking) {
       stopSpeaking();
+    }
+  };
+
+  // Dedicated function for voice messages
+  const sendVoiceMessage = async (messageText: string) => {
+    if (!messageText) return;
+    
+    console.log('Processing voice message:', messageText);
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      sender: 'user',
+      timestamp: new Date(),
+      isVoice: true
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chatbot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: messageText,
+          language: selectedLanguage 
+        })
+      });
+
+      const data = await response.json();
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.response || 'Sorry, I could not process your request.',
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      // Speak the response for voice messages
+      if (chatMode === 'voice') {
+        setTimeout(() => {
+          speakText(assistantMessage.text);
+        }, 200);
+      }
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: selectedLanguage === 'hi' 
+          ? 'खेद है, कनेक्शन में समस्या है।'
+          : 'Sorry, connection error occurred.',
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -503,11 +439,6 @@ export default function AIAssistant() {
         setTimeout(() => {
           speakText(assistantMessage.text);
         }, 100);
-        
-        // Auto-restart listening after response in voice mode
-        if (chatMode === 'voice') {
-          setAutoRestartAfterResponse(true);
-        }
       }
     } catch (error) {
       // Connection error messages in different languages
@@ -662,20 +593,7 @@ export default function AIAssistant() {
               </button>
             </div>
 
-            {/* Voice Controls - Only show in voice mode */}
-            {chatMode === 'voice' && (
-              <>
-                {isSpeaking && (
-                  <button
-                    onClick={stopSpeaking}
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium transition-colors hover:bg-red-200"
-                  >
-                    <Volume2 className="h-3 w-3 inline mr-1" />
-                    {selectedLanguage === 'hi' ? 'रोकें' : 'Stop'}
-                  </button>
-                )}
-              </>
-            )}
+            {/* Remove the separate stop button - we'll use the main button instead */}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -806,23 +724,32 @@ export default function AIAssistant() {
               
               {/* Large Voice Button with different states */}
               <button
-                onClick={toggleVoiceListening}
-                disabled={microphonePermission === 'denied' || isLoading || isSpeaking}
-                className={`relative p-12 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${
+                onClick={() => {
+                  if (isSpeaking) {
+                    // Stop AI speaking when clicked
+                    stopSpeaking();
+                  } else if (!isLoading) {
+                    // Normal voice toggle when not speaking or loading
+                    toggleVoiceListening();
+                  }
+                }}
+                disabled={microphonePermission === 'denied' || isLoading}
+                className={`relative p-12 rounded-full transition-all duration-300 ${
                   isLoading
-                    ? 'bg-yellow-500 text-white shadow-2xl animate-pulse'
+                    ? 'bg-yellow-500 text-white shadow-2xl animate-pulse cursor-wait'
                     : isListening 
-                    ? 'bg-red-500 text-white shadow-2xl scale-110' 
+                    ? 'bg-red-500 text-white shadow-2xl scale-110 cursor-pointer' 
                     : isSpeaking
-                    ? 'bg-blue-500 text-white shadow-xl'
+                    ? 'bg-blue-500 text-white shadow-xl hover:bg-blue-600 cursor-pointer hover:scale-105'
                     : microphonePermission === 'denied'
-                    ? 'bg-gray-400 text-white opacity-50'
-                    : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105'
+                    ? 'bg-gray-400 text-white opacity-50 cursor-not-allowed'
+                    : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105 cursor-pointer'
                 }`}
                 title={
                   isLoading ? 'AI is thinking...' :
-                  isSpeaking ? 'AI is speaking...' :
+                  isSpeaking ? 'Click to stop AI speaking' :
                   microphonePermission === 'denied' ? 'Microphone access denied' : 
+                  isListening ? 'Click to stop listening' :
                   'Click to speak'
                 }
               >
@@ -872,8 +799,8 @@ export default function AIAssistant() {
                     </p>
                     <p className="text-sm text-gray-600">
                       {selectedLanguage === 'hi' 
-                        ? 'AI आपको जवाब सुना रहा है'
-                        : 'AI is speaking the answer'}
+                        ? 'रोकने के लिए बटन पर क्लिक करें'
+                        : 'Click button to stop speaking'}
                     </p>
                   </div>
                 ) : isListening ? (
