@@ -77,7 +77,19 @@ Respond in English only. Be concise and practical for Indian farmers.`,
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const text = response.text();
+    const rawText = response.text();
+    
+    // Clean up markdown formatting for text-to-speech compatibility
+    const text = rawText
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting (**text**)
+      .replace(/\*(.*?)\*/g, '$1')     // Remove italic formatting (*text*)
+      .replace(/\*/g, '')             // Remove any remaining single asterisks
+      .replace(/#{1,6}\s/g, '')       // Remove heading markers
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links, keep text
+      .replace(/`([^`]+)`/g, '$1')    // Remove code formatting
+      .replace(/\n{3,}/g, '\n\n')     // Reduce excessive line breaks
+      .replace(/\s+/g, ' ')           // Replace multiple spaces with single space
+      .trim();
 
     // Parse the response to structure it better
     const sectionNames = {
