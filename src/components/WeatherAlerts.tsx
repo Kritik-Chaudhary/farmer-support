@@ -32,15 +32,22 @@ export default function WeatherAlerts() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
+  const [locationSource, setLocationSource] = useState<'ip' | 'gps' | null>(null);
 
   useEffect(() => {
-    // Get user's location on component mount
+    // First load IP-based weather immediately
+    fetchWeather();
+    setLocationSource('ip');
+    
+    // Then try to get GPS location for better accuracy
     getUserLocation();
   }, []); // Only run once on mount
 
   useEffect(() => {
     if (userLocation) {
+      // Update with GPS-based weather
       fetchWeather();
+      setLocationSource('gps');
     }
   }, [userLocation]); // fetchWeather is stable, userLocation is the dependency
 
@@ -123,10 +130,15 @@ export default function WeatherAlerts() {
         <div className="flex items-center gap-2 text-sm text-gray-700 font-medium bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg">
           <MapPin className="h-4 w-4 text-blue-600" />
           <span>
-            {userLocation ? 
-              '📍 Using your current GPS location' : 
-              '🌐 Location automatically detected'
+            {locationSource === 'gps' ? 
+              '📍 Using your precise GPS location' : 
+              locationSource === 'ip' ?
+                '🌐 Location detected from your network' :
+                '🔍 Detecting your location...'
             }
+            {locationSource === 'ip' && !userLocation && (
+              <span className="ml-2 text-blue-600 animate-pulse">• Checking GPS...</span>
+            )}
           </span>
         </div>
       )}
