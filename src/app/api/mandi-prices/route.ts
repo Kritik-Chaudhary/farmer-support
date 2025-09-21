@@ -143,25 +143,64 @@ export async function GET(request: NextRequest) {
     let allData: any[] = [];
     
     if (commodity) {
-      // If specific commodity requested, fetch it with date fallback
-      const baseParams = {
+      // If specific commodity requested, fetch it with smart date fallback
+      console.log(`Fetching data for specific commodity: ${commodity}`);
+      
+      // Try today first
+      const todayParams = {
         'api-key': process.env.DATA_GOV_API_KEY || '',
         'format': 'json',
         'limit': 100,
         'offset': 0,
+        'filters[arrival_date]': new Date().toISOString().split('T')[0],
         ...(state && { 'filters[state]': state }),
         ...(district && { 'filters[district]': district }),
         'filters[commodity]': commodity
       };
       
-      allData = await fetchWithDateFallback(apiUrl, baseParams);
+      try {
+        const response = await axios.get(apiUrl, { params: todayParams });
+        const todayData = response.data.records || [];
+        
+        if (todayData.length > 0) {
+          allData = todayData;
+          console.log(`Found ${todayData.length} records for ${commodity} (today)`);
+        } else {
+          // If no data today, try date fallback
+          console.log(`No data found for ${commodity} today, trying previous days...`);
+          const fallbackParams = {
+            'api-key': process.env.DATA_GOV_API_KEY || '',
+            'format': 'json',
+            'limit': 100,
+            'offset': 0,
+            ...(state && { 'filters[state]': state }),
+            ...(district && { 'filters[district]': district }),
+            'filters[commodity]': commodity
+          };
+          allData = await fetchWithDateFallback(apiUrl, fallbackParams);
+        }
+      } catch (error) {
+        console.log(`Error fetching ${commodity} for today, using date fallback:`, error);
+        const fallbackParams = {
+          'api-key': process.env.DATA_GOV_API_KEY || '',
+          'format': 'json',
+          'limit': 100,
+          'offset': 0,
+          ...(state && { 'filters[state]': state }),
+          ...(district && { 'filters[district]': district }),
+          'filters[commodity]': commodity
+        };
+        allData = await fetchWithDateFallback(apiUrl, fallbackParams);
+      }
     } else if (state) {
-      // If state is selected, fetch top crops for that state with date fallback
+      // If state is selected, fetch top crops for that state with smart date fallback
       console.log('Fetching top crops for state:', state);
       
-      // Try a few top crops with date fallback
-      const priorityCrops = topCrops.slice(0, 10);
+      const priorityCrops = topCrops.slice(0, 15);
+      const foundCommodities = new Set<string>();
       
+      // First, try today's data for all commodities
+      console.log('Trying today\'s data for all commodities...');
       for (const crop of priorityCrops) {
         const baseParams = {
           'api-key': process.env.DATA_GOV_API_KEY || '',
@@ -170,33 +209,117 @@ export async function GET(request: NextRequest) {
           'offset': 0,
           'filters[state]': state,
           'filters[commodity]': crop.name,
+          'filters[arrival_date]': new Date().toISOString().split('T')[0],
           ...(district && { 'filters[district]': district })
         };
         
         try {
-          const cropData = await fetchWithDateFallback(apiUrl, baseParams);
+          const response = await axios.get(apiUrl, { params: baseParams });
+          const cropData = response.data.records || [];
+          
           if (cropData.length > 0) {
             allData.push(...cropData);
-            console.log(`Found ${cropData.length} records for ${crop.name}`);
-            // Stop after getting enough data
-            if (allData.length >= 20) break;
+            foundCommodities.add(crop.name);
+            console.log(`Found ${cropData.length} records for ${crop.name} (today)`);
           }
         } catch (error) {
-          console.log(`Error fetching ${crop.name}: ${error}`);
+          console.log(`Error fetching ${crop.name} for today: ${error}`);
         }
       }
       
-      console.log(`Found ${allData.length} total records for ${state}`);
+      // Then, for commodities not found today, try previous dates
+      const notFoundCrops = priorityCrops.filter(crop => !foundCommodities.has(crop.name));
+      if (notFoundCrops.length > 0) {
+        console.log(`Checking previous dates for ${notFoundCrops.length} commodities not found today...`);
+        
+        for (let dayOffset = 1; dayOffset <= 6 && notFoundCrops.length > 0; dayOffset++) {
+          const targetDate = new Date();
+          targetDate.setDate(targetDate.getDate() - dayOffset);
+          const dateStr = targetDate.toISOString().split('T')[0];
+          
+          console.log(`Trying date: ${dateStr} for ${notFoundCrops.length} remaining commodities`);
+          
+          const cropsToCheck = [...notFoundCrops]; // Copy array
+          
+          for (const crop of cropsToCheck) {
+            if (foundCommodities.has(crop.name)) continue; // Skip if already found
+            
+            const baseParams = {
+              'api-key': process.env.DATA_GOV_API_KEY || '',
+              'format': 'json',
+              'limit': 10,
+              'offset': 0,
+              'filters[state]': state,
+              'filters[commodity]': crop.name,
+              'filters[arrival_date]': dateStr,
+              ...(district && { 'filters[district]': district })
+            };
+            
+            try {
+              const response = await axios.get(apiUrl, { params: baseParams });
+              const cropData = response.data.records || [];
+              
+              if (cropData.length > 0) {
+                allData.push(...cropData);
+                foundCommodities.add(crop.name);
+                console.log(`Found ${cropData.length} records for ${crop.name} (${dateStr})`);
+                
+                // Remove from not found list
+                const index = notFoundCrops.indexOf(crop);
+                if (index > -1) {
+                  notFoundCrops.splice(index, 1);
+                }
+              }
+            } catch (error) {
+              console.log(`Error fetching ${crop.name} for ${dateStr}: ${error}`);
+            }
+          }
+          
+          // If we have enough data or found all commodities, stop
+          if (allData.length >= 25 || notFoundCrops.length === 0) break;
+        }
+      }
+      
+      console.log(`Found ${allData.length} total records for ${state} from ${foundCommodities.size} commodities`);
     } else {
-      // No state selected, get sample data with date fallback
-      const baseParams = {
+      // No state selected, get sample data with smart date fallback
+      console.log('Fetching general mandi data with smart date approach...');
+      
+      // Try today first with higher limit
+      const todayParams = {
         'api-key': process.env.DATA_GOV_API_KEY || '',
         'format': 'json',
         'limit': 100,
-        'offset': 0
+        'offset': 0,
+        'filters[arrival_date]': new Date().toISOString().split('T')[0]
       };
       
-      allData = await fetchWithDateFallback(apiUrl, baseParams);
+      try {
+        const response = await axios.get(apiUrl, { params: todayParams });
+        const todayData = response.data.records || [];
+        
+        if (todayData.length > 0) {
+          allData = todayData;
+          console.log(`Found ${todayData.length} records for today`);
+        } else {
+          // If no data today, try previous days
+          console.log('No data found for today, trying previous days...');
+          allData = await fetchWithDateFallback(apiUrl, {
+            'api-key': process.env.DATA_GOV_API_KEY || '',
+            'format': 'json',
+            'limit': 100,
+            'offset': 0
+          });
+        }
+      } catch (error) {
+        console.log('Error fetching today\'s data, falling back to date range:', error);
+        allData = await fetchWithDateFallback(apiUrl, {
+          'api-key': process.env.DATA_GOV_API_KEY || '',
+          'format': 'json',
+          'limit': 100,
+          'offset': 0
+        });
+      }
     }
     
     // Check if we have any data
