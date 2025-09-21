@@ -41,6 +41,14 @@ const stateCodeToName: Record<string, string> = {
   'WB': 'West Bengal'
 };
 
+// Top 25 most popular crops in India
+const topCrops = [
+  'Rice', 'Wheat', 'Maize', 'Sugarcane', 'Cotton', 'Soybean', 'Groundnut',
+  'Onion', 'Potato', 'Tomato', 'Chilli', 'Turmeric', 'Mustard', 'Sunflower',
+  'Sesame', 'Jowar', 'Bajra', 'Gram', 'Tur', 'Moong', 'Urad', 'Masoor',
+  'Banana', 'Mango', 'Coconut'
+];
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const stateCode = searchParams.get('state') || '';
@@ -50,169 +58,107 @@ export async function GET(request: NextRequest) {
   // Convert state code to name for API
   const state = stateCodeToName[stateCode] || stateCode;
   
+  console.log('Fetching mandi prices for:', { state, district, commodity });
+  
   try {
-
-    // Data.gov.in API endpoint for mandi prices
     const apiUrl = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070';
-    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const params: Record<string, any> = {
-      'api-key': process.env.DATA_GOV_API_KEY || '',
-      'format': 'json',
-      'limit': 20,
-      'offset': 0
-    };
-
-    // Add filters if provided
-    if (state) params['filters[state]'] = state;
-    if (district) params['filters[district]'] = district;
-    if (commodity) params['filters[commodity]'] = commodity;
-
-    const response = await axios.get(apiUrl, { params });
-
-    const mandiData = response.data;
+    let allData: any[] = [];
+    
+    if (commodity) {
+      // If specific commodity requested, fetch it directly
+      const params = {
+        'api-key': process.env.DATA_GOV_API_KEY || '',
+        'format': 'json',
+        'limit': 100,
+        'offset': 0,
+        ...(state && { 'filters[state]': state }),
+        ...(district && { 'filters[district]': district }),
+        'filters[commodity]': commodity
+      };
+      
+      const response = await axios.get(apiUrl, { params });
+      allData = response.data.records || [];
+    } else if (state) {
+      // If state is selected, fetch top crops for that state
+      console.log('Fetching top crops for state:', state);
+      
+      const cropPromises = topCrops.slice(0, 25).map(async (crop) => {
+        try {
+          const params = {
+            'api-key': process.env.DATA_GOV_API_KEY || '',
+            'format': 'json',
+            'limit': 10, // Get top 10 records per crop
+            'offset': 0,
+            'filters[state]': state,
+            'filters[commodity]': crop,
+            ...(district && { 'filters[district]': district })
+          };
+          
+          const response = await axios.get(apiUrl, { params });
+          return response.data.records || [];
+        } catch (error) {
+          console.log(`No data found for crop: ${crop} in state: ${state}`);
+          return [];
+        }
+      });
+      
+      // Wait for all requests to complete
+      const cropResults = await Promise.all(cropPromises);
+      
+      // Flatten and combine results
+      allData = cropResults.flat();
+      console.log(`Found ${allData.length} total records for ${state}`);
+    } else {
+      // No state selected, get sample data from multiple states
+      const params = {
+        'api-key': process.env.DATA_GOV_API_KEY || '',
+        'format': 'json',
+        'limit': 100,
+        'offset': 0
+      };
+      
+      const response = await axios.get(apiUrl, { params });
+      allData = response.data.records || [];
+    }
+    
+    // Remove duplicates based on state + district + commodity + variety
+    const uniqueData = allData.filter((item, index, self) => {
+      const key = `${item.state}-${item.district}-${item.commodity}-${item.variety}`;
+      return index === self.findIndex(other => 
+        `${other.state}-${other.district}-${other.commodity}-${other.variety}` === key
+      );
+    });
+    
+    // Sort by modal price (descending) to show most relevant prices first
+    const sortedData = uniqueData.sort((a, b) => {
+      const priceA = parseFloat(a.modal_price) || 0;
+      const priceB = parseFloat(b.modal_price) || 0;
+      return priceB - priceA;
+    });
+    
+    console.log(`Returning ${sortedData.length} unique records`);
 
     return NextResponse.json({
       success: true,
-      data: mandiData.records || [],
-      total: mandiData.total || 0,
-      timestamp: new Date().toISOString()
+      data: sortedData,
+      total: sortedData.length,
+      timestamp: new Date().toISOString(),
+      source: 'data.gov.in',
+      note: state ? `Prices for top crops in ${state}` : 'Sample mandi prices from multiple states'
     });
 
   } catch (error) {
     console.error('Mandi prices API error:', error);
     
-    // Return mock data if API fails
-    const allMockData = [
-      {
-        state: 'Maharashtra',
-        district: 'Pune',
-        market: 'Pune(Khadiki)',
-        commodity: 'Onion',
-        variety: 'Red',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '2000',
-        max_price: '3500',
-        modal_price: '2800'
-      },
-      {
-        state: 'Punjab',
-        district: 'Ludhiana',
-        market: 'Ludhiana',
-        commodity: 'Wheat',
-        variety: 'PBW-343',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '2125',
-        max_price: '2350',
-        modal_price: '2225'
-      },
-      {
-        state: 'West Bengal',
-        district: 'Burdwan',
-        market: 'Burdwan',
-        commodity: 'Rice',
-        variety: 'Swarna',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '2100',
-        max_price: '2400',
-        modal_price: '2250'
-      },
-      {
-        state: 'Gujarat',
-        district: 'Rajkot',
-        market: 'Rajkot',
-        commodity: 'Groundnut',
-        variety: 'Bold',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '5200',
-        max_price: '5800',
-        modal_price: '5500'
-      },
-      {
-        state: 'Uttar Pradesh',
-        district: 'Agra',
-        market: 'Agra',
-        commodity: 'Potato',
-        variety: 'Red',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '800',
-        max_price: '1200',
-        modal_price: '1000'
-      },
-      {
-        state: 'Karnataka',
-        district: 'Bangalore',
-        market: 'Bangalore',
-        commodity: 'Tomato',
-        variety: 'Hybrid',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '1500',
-        max_price: '2500',
-        modal_price: '2000'
-      },
-      {
-        state: 'Tamil Nadu',
-        district: 'Coimbatore',
-        market: 'Coimbatore',
-        commodity: 'Coconut',
-        variety: 'Medium',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '9000',
-        max_price: '11000',
-        modal_price: '10000'
-      },
-      {
-        state: 'Madhya Pradesh',
-        district: 'Indore',
-        market: 'Indore',
-        commodity: 'Soybean',
-        variety: 'Yellow',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '6200',
-        max_price: '6800',
-        modal_price: '6500'
-      },
-      {
-        state: 'Haryana',
-        district: 'Karnal',
-        market: 'Karnal',
-        commodity: 'Rice',
-        variety: 'Basmati',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '3800',
-        max_price: '4200',
-        modal_price: '4000'
-      },
-      {
-        state: 'Rajasthan',
-        district: 'Jaipur',
-        market: 'Jaipur(Muhana)',
-        commodity: 'Mustard',
-        variety: 'Yellow',
-        arrival_date: new Date().toISOString().split('T')[0],
-        min_price: '5400',
-        max_price: '5800',
-        modal_price: '5600'
-      }
-    ];
-    
-    // Filter mock data based on state if provided
-    let mockData = allMockData;
-    if (state && state !== stateCode) {
-      mockData = allMockData.filter(item => item.state === state);
-    }
-    if (commodity) {
-      mockData = mockData.filter(item => 
-        item.commodity.toLowerCase().includes(commodity.toLowerCase())
-      );
-    }
-
+    // Return error response - no mock data fallback
     return NextResponse.json({
-      success: true,
-      data: mockData,
-      total: mockData.length,
+      success: false,
+      data: [],
+      total: 0,
       timestamp: new Date().toISOString(),
-      note: 'Showing sample data due to API unavailability'
-    });
+      error: 'Failed to fetch mandi prices from data.gov.in API',
+      message: 'Please try again later or contact support if the issue persists'
+    }, { status: 500 });
   }
 }
