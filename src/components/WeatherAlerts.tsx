@@ -75,8 +75,81 @@ export default function WeatherAlerts() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Location Indicator Skeleton */}
+        <div className="bg-gray-100 border border-gray-200 px-4 py-2 rounded-lg animate-pulse">
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 bg-gray-300 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-300 rounded animate-pulse w-48"></div>
+          </div>
+        </div>
+        
+        {/* Current Weather Skeleton */}
+        <div className="bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg shadow-lg p-4 md:p-8 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="h-8 bg-gray-400 rounded mb-4 w-64"></div>
+              <div className="h-12 bg-gray-400 rounded mb-4 w-32"></div>
+              <div className="h-4 bg-gray-400 rounded mb-2 w-48"></div>
+              <div className="h-6 bg-gray-400 rounded w-40"></div>
+            </div>
+            <div className="h-24 w-24 bg-gray-400 rounded animate-pulse"></div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mt-8">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="bg-gray-400/30 backdrop-blur rounded-lg p-3 border border-gray-400/40">
+                <div className="flex items-center space-x-2">
+                  <div className="h-5 w-5 bg-gray-400 rounded animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="h-3 bg-gray-400 rounded mb-2 w-16"></div>
+                    <div className="h-5 bg-gray-400 rounded w-12"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Alerts Skeleton */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center mb-4">
+            <div className="h-5 w-5 bg-gray-300 rounded animate-pulse mr-2"></div>
+            <div className="h-6 bg-gray-300 rounded animate-pulse w-24"></div>
+          </div>
+          <div className="space-y-3">
+            {[...Array(2)].map((_, index) => (
+              <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-300 rounded mb-2 w-32"></div>
+                    <div className="h-3 bg-gray-300 rounded w-full"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Forecast Skeleton */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="h-6 bg-gray-300 rounded animate-pulse mb-4 w-32"></div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, index) => (
+              <div key={index} className="text-center p-4 border border-gray-200 rounded-lg">
+                <div className="h-4 bg-gray-300 rounded mb-2 w-16 mx-auto animate-pulse"></div>
+                <div className="h-8 w-8 bg-gray-300 rounded mx-auto mb-2 animate-pulse"></div>
+                <div className="h-3 bg-gray-300 rounded mb-2 w-20 mx-auto animate-pulse"></div>
+                <div className="flex justify-center space-x-2 mb-1">
+                  <div className="h-5 bg-gray-300 rounded w-8 animate-pulse"></div>
+                  <div className="h-4 bg-gray-300 rounded w-6 animate-pulse"></div>
+                </div>
+                <div className="h-3 bg-gray-300 rounded w-12 mx-auto animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

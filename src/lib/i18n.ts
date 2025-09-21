@@ -17,12 +17,12 @@ const resources = {
       },
       // Dashboard
       dashboard: {
-        welcome: 'Welcome to Farmer Support App',
+        welcome: 'Welcome to Farmer Support',
         description: 'Your comprehensive digital companion for modern farming. Access AI-powered insights, market prices, weather updates, and government schemes all in one place.',
         todaysTips: "Today's Farming Tips",
         temperature: "Today's Temperature",
+        location: 'Location',
         humidity: 'Humidity',
-        activeFarmers: 'Active Farmers',
         weatherAlert: 'Weather Alert',
         marketUpdate: 'Market Update',
         seasonalTip: 'Seasonal Tip',
@@ -212,12 +212,12 @@ const resources = {
         tagline: 'डिजिटल कृषि'
       },
       dashboard: {
-        welcome: 'किसान सहायता ऐप में आपका स्वागत है',
+        welcome: 'किसान सहायता में आपका स्वागत है',
         description: 'आधुनिक खेती के लिए आपका व्यापक डिजिटल साथी। AI-संचालित अंतर्दृष्टि, बाजार मूल्य, मौसम अपडेट और सरकारी योजनाओं तक एक ही स्थान पर पहुंच प्राप्त करें।',
         todaysTips: 'आज की खेती युक्तियाँ',
         temperature: 'आज का तापमान',
+        location: 'स्थान',
         humidity: 'नमी',
-        activeFarmers: 'सक्रिय किसान',
         weatherAlert: 'मौसम चेतावनी',
         marketUpdate: 'बाजार अपडेट',
         seasonalTip: 'मौसमी सुझाव',

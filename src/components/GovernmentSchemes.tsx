@@ -98,8 +98,36 @@ export default function GovernmentSchemes() {
 
       {/* Schemes Grid */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start space-x-3 flex-1">
+                  <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="h-5 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                  </div>
+                </div>
+                <div className="w-16 h-5 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              
+              <div className="h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex items-start space-x-2">
+                  <div className="w-3 h-3 bg-gray-200 rounded-full animate-pulse mt-1"></div>
+                  <div className="h-3 bg-gray-200 rounded animate-pulse flex-1"></div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <div className="w-3 h-3 bg-gray-200 rounded-full animate-pulse mt-1"></div>
+                  <div className="h-3 bg-gray-200 rounded animate-pulse flex-1"></div>
+                </div>
+              </div>
+              
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

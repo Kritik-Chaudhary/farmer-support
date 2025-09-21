@@ -1,16 +1,26 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { 
   MessageCircle, 
   TrendingUp, 
   Cloud, 
   Camera, 
   FileText, 
-  Users,
+  MapPin,
   Thermometer,
   Droplets
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+interface WeatherData {
+  current: {
+    temperature: number;
+    humidity: number;
+    location: string;
+    country: string;
+  };
+}
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
@@ -18,6 +28,21 @@ interface DashboardProps {
 
 export default function Dashboard({ setActiveTab }: DashboardProps) {
   const { t } = useTranslation();
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    fetchWeather();
+  }, []);
+
+  const fetchWeather = async () => {
+    try {
+      const response = await fetch('/api/weather');
+      const data = await response.json();
+      setWeatherData(data);
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+    }
+  };
   const features = [
     {
       title: t('assistant.title'),
@@ -62,9 +87,24 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
   ];
 
   const quickStats = [
-    { label: t('dashboard.temperature'), value: '28°C', icon: Thermometer },
-    { label: t('dashboard.humidity'), value: '65%', icon: Droplets },
-    { label: t('dashboard.activeFarmers'), value: '1000+', icon: Users },
+    { 
+      label: t('dashboard.location'), 
+      value: weatherData ? `${weatherData.current.location}, ${weatherData.current.country}` : null, 
+      icon: MapPin,
+      isLoading: !weatherData
+    },
+    { 
+      label: t('dashboard.temperature'), 
+      value: weatherData ? `${weatherData.current.temperature}°C` : null, 
+      icon: Thermometer,
+      isLoading: !weatherData
+    },
+    { 
+      label: t('dashboard.humidity'), 
+      value: weatherData ? `${weatherData.current.humidity}%` : null, 
+      icon: Droplets,
+      isLoading: !weatherData
+    },
   ];
 
   return (
@@ -84,11 +124,23 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
           return (
             <div key={index} className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-700 font-medium">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700 font-medium mb-2">{stat.label}</p>
+                  {stat.isLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-8 bg-gray-200 rounded-md animate-pulse"></div>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  )}
                 </div>
-                <Icon className="h-8 w-8 text-gray-500" />
+                <div className="ml-4">
+                  {stat.isLoading ? (
+                    <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
+                  ) : (
+                    <Icon className="h-8 w-8 text-gray-500" />
+                  )}
+                </div>
               </div>
             </div>
           );
