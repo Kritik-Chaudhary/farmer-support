@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Camera, Upload, CheckCircle, Volume2, AlertTriangle, Leaf } from 'lucide-react';
+import { Camera, Upload, CheckCircle, Volume2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +18,7 @@ interface CropAnalysis {
 }
 
 export default function CropDetection() {
-  const { i18n } = useTranslation();
+  // const { i18n } = useTranslation(); // Unused for now
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [analysis, setAnalysis] = useState<CropAnalysis | null>(null);
@@ -254,10 +254,12 @@ export default function CropDetection() {
           ) : (
             <div className="space-y-4">
               <div className="relative h-64 md:h-96">
-                <img
+                <Image
                   src={imagePreview}
                   alt="Crop preview"
-                  className="w-full h-full object-contain rounded-lg"
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  className="rounded-lg"
                 />
               </div>
               <div className="flex justify-center space-x-4">

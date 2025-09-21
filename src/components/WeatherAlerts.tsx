@@ -36,13 +36,13 @@ export default function WeatherAlerts() {
   useEffect(() => {
     // Get user's location on component mount
     getUserLocation();
-  }, []);
+  }, []); // Only run once on mount
 
   useEffect(() => {
     if (userLocation) {
       fetchWeather();
     }
-  }, [userLocation]);
+  }, [userLocation]); // fetchWeather is stable, userLocation is the dependency
 
   const getUserLocation = () => {
     // Try browser geolocation first

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Search, Filter } from 'lucide-react';
+import { TrendingUp, Search } from 'lucide-react';
 
 interface MandiPrice {
   state: string;
@@ -24,7 +24,7 @@ export default function MandiPrices() {
 
   useEffect(() => {
     fetchPrices();
-  }, [selectedState, selectedCommodity]);
+  }, [selectedState, selectedCommodity]); // fetchPrices is stable
 
   const fetchPrices = async () => {
     setLoading(true);

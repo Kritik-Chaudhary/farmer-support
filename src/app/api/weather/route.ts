@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
           if (locationData.valid) {
             lat = locationData.lat;
             lon = locationData.lon;
-            locationName = locationData.city || city;
+            locationName = locationData.city || city || 'Unknown';
             locationDetected = true;
             console.log(`Location detected: ${locationName} (${lat}, ${lon})`);
             break;
@@ -231,8 +231,9 @@ export async function GET(request: NextRequest) {
         } else {
           console.log('No suitable location name found in reverse geocoding response');
         }
-      } catch (error: any) {
-        console.log('Reverse geocoding failed:', error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.log('Reverse geocoding failed:', errorMessage);
         // Keep existing location name
       }
     } else {

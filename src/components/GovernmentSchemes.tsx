@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, ChevronRight, Search, Filter, ExternalLink } from 'lucide-react';
+import { FileText, ChevronRight, Search, ExternalLink } from 'lucide-react';
 
 interface Scheme {
   id: number;
@@ -27,7 +27,7 @@ export default function GovernmentSchemes() {
 
   useEffect(() => {
     fetchSchemes();
-  }, [selectedCategory, searchTerm]);
+  }, [selectedCategory, searchTerm]); // fetchSchemes is stable
 
   const fetchSchemes = async () => {
     setLoading(true);
