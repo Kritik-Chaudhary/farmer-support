@@ -36,12 +36,12 @@ export default function LanguageSelector() {
   if (!mounted) return null;
 
   return (
-    <div className="flex items-center space-x-2">
-      <Languages className="h-4 w-4 text-gray-700" />
+    <div className="flex items-center space-x-1">
+      <Languages className="h-3 w-3 md:h-4 md:w-4 text-gray-700" />
       <select
         value={i18n.language}
         onChange={(e) => changeLanguage(e.target.value)}
-        className="bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm text-gray-900 font-medium focus:outline-none focus:border-green-500"
+        className="bg-white border border-gray-300 rounded-lg px-1 md:px-2 py-1 text-xs md:text-sm text-gray-900 font-medium focus:outline-none focus:border-green-500"
       >
         {languages.map(lang => (
           <option key={lang.code} value={lang.code} className="text-gray-900 font-medium">

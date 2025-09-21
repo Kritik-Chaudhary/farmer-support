@@ -31,15 +31,15 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
 
   return (
     <nav className="bg-white shadow-lg border-b-4 border-green-600 sticky top-0 z-40">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-2 md:px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
-          <div className="flex items-center space-x-2">
-            <Leaf className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-gray-900">
+          <div className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+            <Leaf className="h-6 w-6 md:h-8 md:w-8 text-green-600 flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-sm md:text-xl font-bold text-gray-900 truncate">
                 {t('nav.appName')}
               </h1>
-              <p className="text-xs text-gray-700 font-medium md:hidden">{t('nav.tagline')}</p>
+              <p className="text-xs text-gray-600 font-medium md:hidden truncate">{t('nav.tagline')}</p>
             </div>
           </div>
           
@@ -68,11 +68,13 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
           </div>
 
           {/* Mobile - Current Page Indicator and Language Selector */}
-          <div className="md:hidden flex items-center space-x-2">
-            <span className="text-sm font-semibold text-green-800 bg-green-100 border border-green-200 px-3 py-1 rounded-full">
+          <div className="md:hidden flex items-center space-x-1 flex-shrink-0">
+            <span className="text-xs font-semibold text-green-800 bg-green-100 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">
               {tabs.find(tab => tab.id === activeTab)?.name}
             </span>
-            <LanguageSelector />
+            <div className="flex-shrink-0">
+              <LanguageSelector />
+            </div>
           </div>
         </div>
       </div>
