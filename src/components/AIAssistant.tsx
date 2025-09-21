@@ -34,7 +34,7 @@ export default function AIAssistant() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [chatMode, setChatMode] = useState<'text' | 'voice'>('text');
+  const [chatMode, setChatMode] = useState<'text' | 'voice'>('voice');
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [microphoneError, setMicrophoneError] = useState<string>('');
   const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
@@ -560,6 +560,7 @@ export default function AIAssistant() {
                 onClick={() => {
                   setChatMode('voice');
                   setVoiceEnabled(true);
+                  setInputMessage(''); // Clear any text input when switching to voice mode
                   if (microphoneError) setMicrophoneError('');
                 }}
                 className={`flex items-center px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -735,69 +736,97 @@ export default function AIAssistant() {
               </p>
             </div>
           ) : (
-            /* Voice Chat Mode */
-            <div className="space-y-3">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder={selectedLanguage === 'hi' 
-                    ? 'वॉयस रिकॉर्डिंग या टाइप करें...'
-                    : 'Voice recording or type here...'}
-                  className="flex-1 px-4 py-3 border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium placeholder-gray-500 bg-white disabled:bg-gray-100 transition-colors"
-                  disabled={isListening}
-                />
-                
-                {/* Voice Recording Button */}
+            /* Voice Chat Mode - Pure Voice Only */
+            <div className="space-y-4">
+              {/* Voice Recording Interface */}
+              <div className="flex flex-col items-center space-y-4">
+                {/* Large Voice Recording Button */}
                 <button
                   onMouseDown={startListening}
                   onMouseUp={stopListening}
                   onTouchStart={startListening}
                   onTouchEnd={stopListening}
                   disabled={microphonePermission === 'denied'}
-                  className={`px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium ${
+                  className={`relative p-8 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
                     isListening 
-                      ? 'bg-red-500 text-white animate-pulse shadow-lg scale-105' 
+                      ? 'bg-red-500 text-white animate-pulse shadow-2xl scale-110' 
                       : microphonePermission === 'denied'
                       ? 'bg-gray-400 text-white'
-                      : 'bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg'
+                      : 'bg-green-500 text-white hover:bg-green-600 shadow-xl hover:shadow-2xl hover:scale-105'
                   }`}
                   title={microphonePermission === 'denied' ? 'Microphone access denied' : ''}
                 >
                   {isListening ? (
-                    <MicOff className="h-6 w-6" />
+                    <>
+                      <MicOff className="h-12 w-12" />
+                      {/* Animated rings for listening state */}
+                      <div className="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div>
+                      <div className="absolute inset-2 rounded-full border-2 border-red-200 animate-pulse"></div>
+                    </>
                   ) : (
-                    <Mic className="h-6 w-6" />
+                    <Mic className="h-12 w-12" />
                   )}
                 </button>
                 
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors font-medium flex items-center space-x-2"
-                >
-                  <Send className="h-5 w-5" />
-                  <span className="hidden sm:inline">{selectedLanguage === 'hi' ? 'भेजें' : 'Send'}</span>
-                </button>
+                {/* Voice Status Text */}
+                <div className="text-center">
+                  {isListening ? (
+                    <p className="text-lg font-semibold text-red-600 animate-pulse">
+                      🔴 {selectedLanguage === 'hi' ? 'सुन रहे हैं...' : 'Listening...'}
+                    </p>
+                  ) : (
+                    <p className="text-lg font-medium text-green-600">
+                      🎤 {selectedLanguage === 'hi' 
+                        ? 'बोलने के लिए माइक्रोफोन दबाएं'
+                        : 'Press microphone to speak'}
+                    </p>
+                  )}
+                </div>
               </div>
               
-              <div className="text-center space-y-1">
-                {microphonePermission === 'denied' ? (
-                  <p className="text-xs text-red-600 font-medium">
-                    🚫 {selectedLanguage === 'hi' 
-                      ? 'माइक्रोफोन एक्सेस की आवश्यकता है | ब्राउज़र सेटिंग्स जांचें'
-                      : 'Microphone access required | Check browser settings'}
-                  </p>
-                ) : (
-                  <p className="text-xs text-green-600 font-medium">
-                    🎤 {selectedLanguage === 'hi' 
-                      ? 'वॉयस मोड: माइक्रोफोन बटन दबाकर बात करें'
-                      : 'Voice Mode: Hold microphone button to speak'}
-                  </p>
-                )}
+              {/* Voice Mode Instructions */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  </div>
+                  <div className="text-sm text-green-800">
+                    <p className="font-semibold mb-1">
+                      {selectedLanguage === 'hi' ? 'वॉयस चैट का उपयोग कैसे करें:' : 'How to use Voice Chat:'}
+                    </p>
+                    <ul className="space-y-1 text-xs">
+                      <li>{selectedLanguage === 'hi' 
+                        ? '• माइक्रोफोन बटन को दबाकर रखें और बोलें'
+                        : '• Hold the microphone button and speak'}</li>
+                      <li>{selectedLanguage === 'hi' 
+                        ? '• बोलना समाप्त होने पर बटन छोड़ दें'
+                        : '• Release the button when finished speaking'}</li>
+                      <li>{selectedLanguage === 'hi' 
+                        ? '• AI असिस्टेंट आपको जवाब सुनाएगा'
+                        : '• AI Assistant will speak the response back to you'}</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
+              
+              {/* Error Message for Voice Mode */}
+              {microphonePermission === 'denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <MicOff className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-700">
+                      <p className="font-semibold mb-1">
+                        {selectedLanguage === 'hi' ? 'माइक्रोफोन एक्सेस आवश्यक' : 'Microphone Access Required'}
+                      </p>
+                      <p className="text-xs">
+                        {selectedLanguage === 'hi' 
+                          ? 'वॉयस चैट के लिए कृपया ब्राउज़र में माइक्रोफोन की अनुमति दें।'
+                          : 'Please allow microphone access in your browser for voice chat.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
