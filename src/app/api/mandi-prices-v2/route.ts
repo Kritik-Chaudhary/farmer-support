@@ -65,15 +65,19 @@ const topCommodities = [
   { id: '13', name: 'Soyabean', priority: 2 }
 ];
 
-// Function to scrape agmarknet data
-async function scrapeAgmarknetData(stateCode?: string, commodityId?: string) {
+// Function to scrape agmarknet data with date fallback
+async function scrapeAgmarknetData(stateCode?: string, commodityId?: string, dateOffset: number = 0) {
   try {
-    const currentDate = new Date();
-    const dateStr = currentDate.toLocaleDateString('en-IN', {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - dateOffset);
+    
+    const dateStr = targetDate.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     }).replace(/ /g, '-');
+
+    console.log(`Attempting to fetch data for date: ${dateStr} (offset: ${dateOffset} days)`);
 
     // Base URL for agmarknet search
     const baseUrl = 'https://agmarknet.gov.in/SearchCmmMkt.aspx';
@@ -95,7 +99,7 @@ async function scrapeAgmarknetData(stateCode?: string, commodityId?: string) {
     });
 
     const response = await axios.get(`${baseUrl}?${params.toString()}`, {
-      timeout: 10000,
+      timeout: 15000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
@@ -142,39 +146,37 @@ async function scrapeAgmarknetData(stateCode?: string, commodityId?: string) {
       });
     }
 
+    console.log(`Found ${rows.length} records for date: ${dateStr}`);
     return rows;
   } catch (error) {
-    console.error('Error scraping agmarknet:', error);
+    console.error(`Error scraping agmarknet for date offset ${dateOffset}:`, error);
     return [];
   }
 }
 
-// Mock data generator as fallback
-function generateMockData(stateCode?: string, commodity?: string) {
-  const states = ['Maharashtra', 'Punjab', 'Haryana', 'Gujarat', 'Karnataka'];
-  const selectedState = stateCode ? stateMapping[stateCode]?.name : states[Math.floor(Math.random() * states.length)];
-  const crops = commodity ? [commodity] : ['Rice', 'Wheat', 'Onion', 'Potato', 'Tomato'];
+// Function to try fetching data with date fallback (today, yesterday, day before)
+async function scrapeWithDateFallback(stateCode?: string, commodityId?: string) {
+  // Try today first
+  let data = await scrapeAgmarknetData(stateCode, commodityId, 0);
   
-  const mockData: any[] = [];
+  if (data.length === 0) {
+    console.log('No data found for today, trying yesterday...');
+    data = await scrapeAgmarknetData(stateCode, commodityId, 1);
+  }
   
-  crops.slice(0, 5).forEach((crop) => {
-    const basePrice = Math.floor(Math.random() * 3000) + 1000;
-    mockData.push({
-      state: selectedState,
-      district: `${selectedState} District`,
-      market: `${selectedState} Market`,
-      commodity: crop,
-      variety: 'Common',
-      arrival_date: new Date().toLocaleDateString('en-GB'),
-      min_price: (basePrice - 200).toString(),
-      max_price: (basePrice + 300).toString(),
-      modal_price: basePrice.toString(),
-      grade: 'FAQ'
-    });
-  });
+  if (data.length === 0) {
+    console.log('No data found for yesterday, trying day before yesterday...');
+    data = await scrapeAgmarknetData(stateCode, commodityId, 2);
+  }
   
-  return mockData;
+  if (data.length === 0) {
+    console.log('No data found for the last 3 days, trying 3 days ago...');
+    data = await scrapeAgmarknetData(stateCode, commodityId, 3);
+  }
+  
+  return data;
 }
+
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -196,14 +198,14 @@ export async function GET(request: NextRequest) {
     let allData: any[] = [];
     
     if (commodity) {
-      // Fetch specific commodity
+      // Fetch specific commodity with date fallback
       const commodityInfo = topCommodities.find(c => c.name.toLowerCase().includes(commodity.toLowerCase()));
       if (commodityInfo) {
         console.log(`Fetching data for commodity: ${commodity} (ID: ${commodityInfo.id})`);
-        allData = await scrapeAgmarknetData(stateCode, commodityInfo.id);
+        allData = await scrapeWithDateFallback(stateCode, commodityInfo.id);
       }
     } else if (stateCode) {
-      // Fetch top commodities for the state
+      // Fetch top commodities for the state with date fallback
       console.log(`Fetching top commodities for state: ${stateInfo.name} (Code: ${stateCode})`);
       
       // Try priority 1 commodities first
@@ -211,27 +213,66 @@ export async function GET(request: NextRequest) {
       
       for (const commodity of priority1Commodities) {
         try {
-          const data = await scrapeAgmarknetData(stateCode, commodity.id);
+          const data = await scrapeWithDateFallback(stateCode, commodity.id);
           if (data.length > 0) {
             allData.push(...data);
             console.log(`Found ${data.length} records for ${commodity.name}`);
+            // Break after finding data for 2-3 commodities to avoid timeout
+            if (allData.length >= 15) break;
           }
           // Small delay to avoid overwhelming the server
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
           console.log(`Error fetching ${commodity.name}: ${error}`);
         }
       }
+      
+      // If still no data, try priority 2 commodities
+      if (allData.length === 0) {
+        console.log('No data found for priority 1 commodities, trying priority 2...');
+        const priority2Commodities = topCommodities.filter(c => c.priority === 2).slice(0, 3);
+        
+        for (const commodity of priority2Commodities) {
+          try {
+            const data = await scrapeWithDateFallback(stateCode, commodity.id);
+            if (data.length > 0) {
+              allData.push(...data);
+              console.log(`Found ${data.length} records for ${commodity.name}`);
+              break; // Stop after finding first working commodity
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            console.log(`Error fetching ${commodity.name}: ${error}`);
+          }
+        }
+      }
     } else {
-      // Fetch general data
+      // Fetch general data with date fallback
       console.log('Fetching general mandi data');
-      allData = await scrapeAgmarknetData();
+      allData = await scrapeWithDateFallback();
     }
     
-    // If no real data found, use mock data
+    // Check if we have any data
     if (allData.length === 0) {
-      console.log('No real data found, using mock data');
-      allData = generateMockData(stateParam, commodity);
+      console.log('No mandi price data found for the last 4 days');
+      return NextResponse.json({
+        success: false,
+        data: [],
+        total: 0,
+        timestamp: new Date().toISOString(),
+        source: 'agmarknet.gov.in (enhanced scraping)',
+        metadata: {
+          state_searched: stateInfo?.name || stateParam || 'All states',
+          state_code: stateCode || 'N/A',
+          commodity_searched: commodity || 'Top commodities',
+          method: 'live_scraping_failed',
+          available_states: Object.keys(stateMapping).length,
+          available_commodities: topCommodities.length,
+          days_checked: 4
+        },
+        error: 'No mandi price data available',
+        message: `No price data found for ${commodity || 'requested commodities'} in ${stateInfo?.name || 'the specified region'} for the last 4 days. This could be due to market holidays, data unavailability, or technical issues with the source.`
+      }, { status: 404 });
     }
     
     // Remove duplicates and sort
@@ -248,44 +289,51 @@ export async function GET(request: NextRequest) {
       return priceB - priceA;
     });
     
-    console.log(`Returning ${sortedData.length} unique records`);
+    // Determine the most recent date from the data
+    const mostRecentDate = sortedData.length > 0 ? sortedData[0].arrival_date : 'N/A';
+    
+    console.log(`Returning ${sortedData.length} unique records with most recent data from: ${mostRecentDate}`);
     
     return NextResponse.json({
       success: true,
       data: sortedData,
       total: sortedData.length,
       timestamp: new Date().toISOString(),
-      source: 'agmarknet.gov.in (enhanced scraping)',
+      source: 'agmarknet.gov.in (enhanced scraping with date fallback)',
       metadata: {
         state_searched: stateInfo?.name || stateParam || 'All states',
         state_code: stateCode || 'N/A',
         commodity_searched: commodity || 'Top commodities',
-        method: allData.length > 0 ? 'live_scraping' : 'mock_fallback',
+        method: 'live_scraping_with_date_fallback',
         available_states: Object.keys(stateMapping).length,
-        available_commodities: topCommodities.length
+        available_commodities: topCommodities.length,
+        data_date: mostRecentDate,
+        data_freshness: mostRecentDate === new Date().toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short', 
+          year: 'numeric'
+        }).replace(/ /g, '-') ? 'today' : 'historical'
       },
-      note: `Mandi prices for ${commodity || 'top crops'} in ${stateInfo?.name || 'multiple states'} using enhanced scraping`
+      note: `Live mandi prices for ${commodity || 'top crops'} in ${stateInfo?.name || 'multiple states'} - Data from ${mostRecentDate}`
     });
 
   } catch (error) {
     console.error('Enhanced mandi prices API error:', error);
     
-    // Fallback to mock data on error
-    const mockData = generateMockData(stateParam, commodity);
-    
     return NextResponse.json({
-      success: true,
-      data: mockData,
-      total: mockData.length,
+      success: false,
+      data: [],
+      total: 0,
       timestamp: new Date().toISOString(),
-      source: 'mock_data_fallback',
+      source: 'agmarknet.gov.in (enhanced scraping)',
       metadata: {
         state_searched: stateMapping[stateParam]?.name || stateParam || 'All states',
         commodity_searched: commodity || 'Top commodities',
-        method: 'mock_fallback_on_error',
-        error_message: 'Primary data source unavailable, showing mock data'
+        method: 'scraping_error',
+        error_message: 'Technical error occurred while fetching data'
       },
-      note: 'Mock data provided due to API connectivity issues'
-    });
+      error: 'API temporarily unavailable',
+      message: 'Unable to fetch mandi prices due to technical issues. Please try again in a few moments.'
+    }, { status: 500 });
   }
 }

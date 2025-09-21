@@ -93,6 +93,38 @@ function getAllCommodityNames() {
   return topCrops.map(crop => crop.name);
 }
 
+// Function to try different date ranges
+async function fetchWithDateFallback(apiUrl: string, baseParams: any) {
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    dates.push(date.toISOString().split('T')[0]);
+  }
+  
+  for (const date of dates) {
+    try {
+      console.log(`Trying to fetch data for date: ${date}`);
+      const params = {
+        ...baseParams,
+        'filters[arrival_date]': date
+      };
+      
+      const response = await axios.get(apiUrl, { params });
+      const data = response.data.records || [];
+      
+      if (data.length > 0) {
+        console.log(`Found ${data.length} records for date: ${date}`);
+        return data;
+      }
+    } catch (error) {
+      console.log(`Error fetching data for ${date}:`, error);
+    }
+  }
+  
+  return [];
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const stateCode = searchParams.get('state') || '';
@@ -110,8 +142,8 @@ export async function GET(request: NextRequest) {
     let allData: any[] = [];
     
     if (commodity) {
-      // If specific commodity requested, fetch it directly
-      const params = {
+      // If specific commodity requested, fetch it with date fallback
+      const baseParams = {
         'api-key': process.env.DATA_GOV_API_KEY || '',
         'format': 'json',
         'limit': 100,
@@ -121,49 +153,70 @@ export async function GET(request: NextRequest) {
         'filters[commodity]': commodity
       };
       
-      const response = await axios.get(apiUrl, { params });
-      allData = response.data.records || [];
+      allData = await fetchWithDateFallback(apiUrl, baseParams);
     } else if (state) {
-      // If state is selected, fetch top crops for that state
+      // If state is selected, fetch top crops for that state with date fallback
       console.log('Fetching top crops for state:', state);
       
-      const cropPromises = topCrops.slice(0, 30).map(async (crop) => {
+      // Try a few top crops with date fallback
+      const priorityCrops = topCrops.slice(0, 10);
+      
+      for (const crop of priorityCrops) {
+        const baseParams = {
+          'api-key': process.env.DATA_GOV_API_KEY || '',
+          'format': 'json',
+          'limit': 10,
+          'offset': 0,
+          'filters[state]': state,
+          'filters[commodity]': crop.name,
+          ...(district && { 'filters[district]': district })
+        };
+        
         try {
-          const params = {
-            'api-key': process.env.DATA_GOV_API_KEY || '',
-            'format': 'json',
-            'limit': 5, // Get top 5 records per crop to manage response size
-            'offset': 0,
-            'filters[state]': state,
-            'filters[commodity]': crop.name, // Use crop name for API call
-            ...(district && { 'filters[district]': district })
-          };
-          
-          const response = await axios.get(apiUrl, { params });
-          return response.data.records || [];
+          const cropData = await fetchWithDateFallback(apiUrl, baseParams);
+          if (cropData.length > 0) {
+            allData.push(...cropData);
+            console.log(`Found ${cropData.length} records for ${crop.name}`);
+            // Stop after getting enough data
+            if (allData.length >= 20) break;
+          }
         } catch (error) {
-          console.log(`No data found for crop: ${crop.name} (ID: ${crop.id}) in state: ${state}`);
-          return [];
+          console.log(`Error fetching ${crop.name}: ${error}`);
         }
-      });
+      }
       
-      // Wait for all requests to complete
-      const cropResults = await Promise.all(cropPromises);
-      
-      // Flatten and combine results
-      allData = cropResults.flat();
       console.log(`Found ${allData.length} total records for ${state}`);
     } else {
-      // No state selected, get sample data from multiple states
-      const params = {
+      // No state selected, get sample data with date fallback
+      const baseParams = {
         'api-key': process.env.DATA_GOV_API_KEY || '',
         'format': 'json',
         'limit': 100,
         'offset': 0
       };
       
-      const response = await axios.get(apiUrl, { params });
-      allData = response.data.records || [];
+      allData = await fetchWithDateFallback(apiUrl, baseParams);
+    }
+    
+    // Check if we have any data
+    if (allData.length === 0) {
+      console.log('No mandi price data found for the last 7 days');
+      return NextResponse.json({
+        success: false,
+        data: [],
+        total: 0,
+        timestamp: new Date().toISOString(),
+        source: 'data.gov.in API (agmarknet)',
+        metadata: {
+          state_searched: state || 'All states',
+          district_searched: district || 'All districts',
+          commodity_searched: commodity || 'Top crops auto-selected',
+          days_checked: 7,
+          method: 'date_fallback_exhausted'
+        },
+        error: 'No mandi price data available',
+        message: `No price data found for ${commodity || 'requested commodities'} in ${state || 'the specified region'} for the last 7 days. This could be due to market holidays, data unavailability, or technical issues with the source.`
+      }, { status: 404 });
     }
     
     // Remove duplicates based on state + district + commodity + variety
@@ -186,13 +239,16 @@ export async function GET(request: NextRequest) {
     // Get unique commodities in the result for metadata
     const uniqueCommodities = [...new Set(sortedData.map(item => item.commodity))];
     const searchedCommodity = commodity ? getCommodityInfo(commodity) : null;
+    
+    // Get the most recent date from the data
+    const mostRecentDate = sortedData.length > 0 ? sortedData[0].arrival_date : 'N/A';
 
     return NextResponse.json({
       success: true,
       data: sortedData,
       total: sortedData.length,
       timestamp: new Date().toISOString(),
-      source: 'data.gov.in API (agmarknet)',
+      source: 'data.gov.in API (agmarknet) with date fallback',
       metadata: {
         state_searched: state || 'All states',
         district_searched: district || 'All districts',
@@ -200,22 +256,30 @@ export async function GET(request: NextRequest) {
         commodity_info: searchedCommodity,
         unique_commodities_found: uniqueCommodities,
         total_commodities_searched: state && !commodity ? topCrops.length : (commodity ? 1 : 'multiple'),
-        available_commodities: getAllCommodityNames()
+        available_commodities: getAllCommodityNames(),
+        data_date: mostRecentDate,
+        method: 'live_api_with_date_fallback'
       },
-      note: state ? `Mandi prices for ${commodity || 'top crops'} in ${state}` : 'Sample mandi prices from multiple states'
+      note: `Live mandi prices for ${commodity || 'top crops'} in ${state || 'multiple states'} - Data from ${mostRecentDate}`
     });
 
   } catch (error) {
     console.error('Mandi prices API error:', error);
     
-    // Return error response - no mock data fallback
     return NextResponse.json({
       success: false,
       data: [],
       total: 0,
       timestamp: new Date().toISOString(),
+      source: 'data.gov.in API (agmarknet)',
+      metadata: {
+        state_searched: state || 'All states',
+        district_searched: district || 'All districts',
+        commodity_searched: commodity || 'Top crops auto-selected',
+        method: 'api_error'
+      },
       error: 'Failed to fetch mandi prices from data.gov.in API',
-      message: 'Please try again later or contact support if the issue persists'
+      message: 'Unable to fetch mandi prices due to API connectivity issues. Please try again later or contact support if the issue persists.'
     }, { status: 500 });
   }
 }
