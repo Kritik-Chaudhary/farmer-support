@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     const base64Image = buffer.toString('base64');
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Use a model supported by the current API version. Updated from gemini-1.5-flash
+  // to gemini-2.5-flash which supports generateContent for v1beta.
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Create language-specific prompts
     const createPrompt = (lang: string) => {

@@ -151,7 +151,9 @@ Note: User is asking about prices. Provide specific price estimates and market t
       }
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Use a model supported by the current API version. Updated from gemini-1.5-flash
+  // to gemini-2.5-flash which supports generateContent for v1beta.
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Language-specific prompts
     const languageInstructions = {
@@ -185,9 +187,53 @@ Note: User is asking about prices. Provide specific price estimates and market t
 
     Farmer's question: ${message}`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Call the generative model with defensive error handling.
+    // Some Google models or methods may not be available for the installed API version
+    // (see runtime logs). If the call fails, return a helpful fallback instead of throwing.
+    let text = '';
+    try {
+      const result = await model.generateContent(prompt);
+      // older/newer SDK shapes may vary; attempt to get a response.text()
+      const response = await (result as any).response;
+      if (response && typeof response.text === 'function') {
+        text = response.text();
+      } else if (typeof result === 'string') {
+        text = result;
+      } else if ((result as any)?.output?.[0]?.content?.[0]?.text) {
+        text = (result as any).output[0].content[0].text;
+      } else {
+        // fallback: try to stringify partial result
+        text = JSON.stringify(result).slice(0, 1000);
+      }
+    } catch (aiError) {
+      console.error('Generative AI call failed:', aiError);
+
+      // Log structured error details if present
+      try {
+        if ((aiError as any).status) console.error('AI status:', (aiError as any).status);
+        if ((aiError as any).statusText) console.error('AI statusText:', (aiError as any).statusText);
+        if ((aiError as any).errorDetails) console.error('AI errorDetails:', (aiError as any).errorDetails);
+      } catch (e) {
+        // ignore
+      }
+
+      // Provide a graceful fallback reply so the frontend can still show something useful.
+      if (dataFetched) {
+        const snippets: string[] = [];
+        if (weatherData && (weatherData as any).current) {
+          const c = (weatherData as any).current;
+          snippets.push(`Weather: ${c.location || ''} ${c.temperature || ''}°C ${c.weather?.description || ''}`);
+        }
+        if (priceData && (priceData as any).data) {
+          const p = (priceData as any).data.slice(0, 3).map((it: any) => `${it.commodity}: ₹${it.price}`).join('; ');
+          if (p) snippets.push(`Prices: ${p}`);
+        }
+
+        text = `AI service unavailable right now. Here's the live data I fetched: ${snippets.join(' | ')}. Please try again later.`;
+      } else {
+        text = `AI service unavailable right now. Please try again later.`;
+      }
+    }
     
     // Clean up markdown formatting for text-to-speech compatibility
     const cleanText = text
