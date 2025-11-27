@@ -187,33 +187,70 @@ Note: User is asking about prices. Provide specific price estimates and market t
 
     Farmer's question: ${message}`;
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     // Call the generative model with defensive error handling.
     // Some Google models or methods may not be available for the installed API version
     // (see runtime logs). If the call fails, return a helpful fallback instead of throwing.
     let text = '';
+
+    // Type guards for different possible SDK result shapes
+    type GenWithResponse = { response: { text: () => string } };
+    type GenWithOutput = { output?: Array<{ content?: Array<{ text?: string }> }> };
+
+    const hasResponseText = (v: unknown): v is GenWithResponse => {
+      try {
+        if (typeof v !== 'object' || v === null) return false;
+        const obj = v as Record<string, unknown>;
+        if (!('response' in obj)) return false;
+        const resp = obj['response'];
+        return typeof resp === 'object' && resp !== null && typeof (resp as Record<string, unknown>)['text'] === 'function';
+      } catch {
+        return false;
+      }
+    };
+
+    const hasOutputText = (v: unknown): v is GenWithOutput => {
+      try {
+        if (typeof v !== 'object' || v === null) return false;
+        const obj = v as Record<string, unknown>;
+        const output = obj['output'];
+        if (!Array.isArray(output)) return false;
+        const firstOut = output[0] as Record<string, unknown> | undefined;
+        const content = firstOut?.['content'];
+        if (!Array.isArray(content)) return false;
+        return typeof (content[0] as Record<string, unknown>)['text'] === 'string';
+      } catch {
+        return false;
+      }
+    };
+
     try {
       const result = await model.generateContent(prompt);
-      // older/newer SDK shapes may vary; attempt to get a response.text()
-      const response = await (result as any).response;
-      if (response && typeof response.text === 'function') {
-        text = response.text();
+
+      if (hasResponseText(result)) {
+        text = result.response.text();
       } else if (typeof result === 'string') {
         text = result;
-      } else if ((result as any)?.output?.[0]?.content?.[0]?.text) {
-        text = (result as any).output[0].content[0].text;
+      } else if (hasOutputText(result)) {
+        text = (result as GenWithOutput).output![0].content![0].text || '';
       } else {
         // fallback: try to stringify partial result
-        text = JSON.stringify(result).slice(0, 1000);
+        try {
+          text = JSON.stringify(result).slice(0, 1000);
+        } catch {
+          text = '';
+        }
       }
-    } catch (aiError) {
+    } catch (aiError: unknown) {
       console.error('Generative AI call failed:', aiError);
 
       // Log structured error details if present
       try {
-        if ((aiError as any).status) console.error('AI status:', (aiError as any).status);
-        if ((aiError as any).statusText) console.error('AI statusText:', (aiError as any).statusText);
-        if ((aiError as any).errorDetails) console.error('AI errorDetails:', (aiError as any).errorDetails);
+        if (typeof aiError === 'object' && aiError !== null) {
+          const a = aiError as Record<string, unknown>;
+          if (typeof a['status'] !== 'undefined') console.error('AI status:', a['status']);
+          if (typeof a['statusText'] !== 'undefined') console.error('AI statusText:', a['statusText']);
+          if (typeof a['errorDetails'] !== 'undefined') console.error('AI errorDetails:', a['errorDetails']);
+        }
       } catch (e) {
         // ignore
       }
@@ -221,12 +258,16 @@ Note: User is asking about prices. Provide specific price estimates and market t
       // Provide a graceful fallback reply so the frontend can still show something useful.
       if (dataFetched) {
         const snippets: string[] = [];
-        if (weatherData && (weatherData as any).current) {
-          const c = (weatherData as any).current;
-          snippets.push(`Weather: ${c.location || ''} ${c.temperature || ''}°C ${c.weather?.description || ''}`);
+        if (weatherData && typeof weatherData === 'object' && (weatherData as Record<string, unknown>)['current']) {
+          const c = (weatherData as Record<string, unknown>)['current'] as Record<string, unknown>;
+          const loc = (c['location'] as string) || '';
+          const temp = (c['temperature'] as number) ?? '';
+          const cond = ((c['weather'] as Record<string, unknown> | undefined)?.['description'] as string) || '';
+          snippets.push(`Weather: ${loc} ${temp}°C ${cond}`);
         }
-        if (priceData && (priceData as any).data) {
-          const p = (priceData as any).data.slice(0, 3).map((it: any) => `${it.commodity}: ₹${it.price}`).join('; ');
+        if (priceData && typeof priceData === 'object' && Array.isArray((priceData as Record<string, unknown>)['data'])) {
+          const dataArr = (priceData as Record<string, unknown>)['data'] as Array<Record<string, unknown>>;
+          const p = dataArr.slice(0, 3).map(it => `${(it['commodity'] as string) || ''}: ₹${(it['price'] as number) || ''}`).join('; ');
           if (p) snippets.push(`Prices: ${p}`);
         }
 
@@ -235,7 +276,6 @@ Note: User is asking about prices. Provide specific price estimates and market t
         text = `AI service unavailable right now. Please try again later.`;
       }
     }
-    /* eslint-enable @typescript-eslint/no-explicit-any */
     
     // Clean up markdown formatting for text-to-speech compatibility
     const cleanText = text
