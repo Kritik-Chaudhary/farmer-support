@@ -187,6 +187,7 @@ Note: User is asking about prices. Provide specific price estimates and market t
 
     Farmer's question: ${message}`;
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     // Call the generative model with defensive error handling.
     // Some Google models or methods may not be available for the installed API version
     // (see runtime logs). If the call fails, return a helpful fallback instead of throwing.
@@ -234,6 +235,7 @@ Note: User is asking about prices. Provide specific price estimates and market t
         text = `AI service unavailable right now. Please try again later.`;
       }
     }
+    /* eslint-enable @typescript-eslint/no-explicit-any */
     
     // Clean up markdown formatting for text-to-speech compatibility
     const cleanText = text
