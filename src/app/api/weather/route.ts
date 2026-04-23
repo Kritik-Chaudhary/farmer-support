@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
     let lon = searchParams.get('lon');
     let locationName = ''; // Initialize location name
 
+    /*
     // Use Vercel/Next.js geo headers when available, then fall back to IP-based lookup.
     if (!lat || !lon) {
       // Default coordinates for major Indian cities
@@ -136,17 +137,15 @@ export async function GET(request: NextRequest) {
             })
           }
           // Commented out ipinfo.io as it's fetching wrong info
-          /*
-          {
-            url: 'https://ipinfo.io/json',
-            parser: (data: IpInfoIoResponse) => ({
-              lat: data.loc?.split(',')[0],
-              lon: data.loc?.split(',')[1], 
-              city: data.city || data.region,
-              valid: data.loc && data.loc.includes(',')
-            })
-          }
-          */
+          // {
+          //   url: 'https://ipinfo.io/json',
+          //   parser: (data: IpInfoIoResponse) => ({
+          //     lat: data.loc?.split(',')[0],
+          //     lon: data.loc?.split(',')[1], 
+          //     city: data.city || data.region,
+          //     valid: data.loc && data.loc.includes(',')
+          //   })
+          // }
         ];
         
         for (const service of backupServices) {
@@ -178,6 +177,15 @@ export async function GET(request: NextRequest) {
         lon = coords.lon.toString();
         locationName = 'Dehradun';
       }
+    }
+    */
+
+    // Use default Dehradun location only for demo presentation.
+    if (!lat || !lon) {
+      const defaultCoords = { lat: 30.3275, lon: 78.0325 };
+      lat = defaultCoords.lat.toString();
+      lon = defaultCoords.lon.toString();
+      locationName = 'Dehradun';
     }
 
     // Use Open-Meteo API (free, no key required)
