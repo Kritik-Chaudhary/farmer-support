@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     let lon = searchParams.get('lon');
     let locationName = ''; // Initialize location name
 
-    // Only use IP-based location detection for reliability
+    // Use Vercel/Next.js geo headers when available, then fall back to IP-based lookup.
     if (!lat || !lon) {
       // Default coordinates for major Indian cities
       const cityCoordinates: { [key: string]: { lat: number; lon: number } } = {
@@ -71,6 +71,30 @@ export async function GET(request: NextRequest) {
         'Dehradun': { lat: 30.3275, lon: 78.0325 }
       };
 
+      const vercelLat = request.headers.get('x-vercel-ip-latitude');
+      const vercelLon = request.headers.get('x-vercel-ip-longitude');
+      const vercelCity = request.headers.get('x-vercel-ip-city');
+      const vercelRegion = request.headers.get('x-vercel-ip-region');
+      const vercelCountry = request.headers.get('x-vercel-ip-country');
+      const geo = (request as any).geo;
+      let locationDetected = false;
+
+      if ((!lat || !lon) && geo?.latitude && geo?.longitude) {
+        lat = geo.latitude.toString();
+        lon = geo.longitude.toString();
+        locationName = geo.city || geo.region || geo.country || 'Detected Location';
+        locationDetected = true;
+        console.log(`Using request.geo: ${locationName} (${lat}, ${lon})`);
+      }
+
+      if ((!lat || !lon) && !locationDetected && vercelLat && vercelLon) {
+        lat = vercelLat;
+        lon = vercelLon;
+        locationName = vercelCity || vercelRegion || vercelCountry || 'Detected Location';
+        locationDetected = true;
+        console.log(`Using Vercel geo headers: ${locationName} (${lat}, ${lon})`);
+      }
+
       console.log('Detecting location from IP...');
       
       // Get the user's IP address from the request headers
@@ -79,8 +103,6 @@ export async function GET(request: NextRequest) {
       const userIP = forwardedFor?.split(',')[0] || realIp || 'unknown';
       
       console.log(`User IP: ${userIP}`);
-      
-      let locationDetected = false;
       
       // Try IP-API.com first as it was working before
       try {
