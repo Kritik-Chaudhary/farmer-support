@@ -112,7 +112,9 @@ export async function GET(request: NextRequest) {
               city: data.city,
               valid: data.latitude && data.longitude
             })
-          },
+          }
+          // Commented out ipinfo.io as it's fetching wrong info
+          /*
           {
             url: 'https://ipinfo.io/json',
             parser: (data: IpInfoIoResponse) => ({
@@ -122,6 +124,7 @@ export async function GET(request: NextRequest) {
               valid: data.loc && data.loc.includes(',')
             })
           }
+          */
         ];
         
         for (const service of backupServices) {
@@ -145,13 +148,13 @@ export async function GET(request: NextRequest) {
         }
       }
       
-      // Final fallback to Delhi if all services fail
+      // Final fallback to Dehradun if all services fail
       if (!locationDetected) {
-        console.log('All IP services failed, using Delhi as fallback');
-        const coords = cityCoordinates['Delhi'];
+        console.log('All IP services failed, using Dehradun as fallback');
+        const coords = cityCoordinates['Dehradun'];
         lat = coords.lat.toString();
         lon = coords.lon.toString();
-        locationName = 'Delhi';
+        locationName = 'Dehradun';
       }
     }
 
@@ -345,7 +348,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Weather API error:', error);
     
-    // Return fallback weather data for Delhi
+    // Return fallback weather data for Dehradun
     const mockData = {
       success: true,
       current: {
@@ -359,7 +362,7 @@ export async function GET(request: NextRequest) {
           icon: '01d'
         },
         wind: { speed: 3.5, deg: 0 },
-        location: 'Delhi',
+        location: 'Dehradun',
         country: 'IN'
       },
       forecast: [
